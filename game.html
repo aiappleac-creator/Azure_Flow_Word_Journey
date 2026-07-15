@@ -119,6 +119,7 @@
             line-height: 0;
             width: 100%;
             text-align: center;
+            pointer-events: auto;
         }
         .icon-btn:hover {
             transform: scale(1.04);
@@ -150,7 +151,7 @@
             z-index: -1;
         }
 
-        /* ===== 音量面板 — 原始正确尺寸 ===== */
+        /* ===== 音量面板 ===== */
         .menu-volume {
             position: absolute;
             bottom: 20px;
@@ -217,7 +218,7 @@
             z-index: -1;
         }
 
-        /* ----- 折叠教学面板（可滚动） ----- */
+        /* ----- 折叠教学面板 ----- */
         .tutorial-fold {
             width: 100%;
             max-width: 520px;
@@ -291,7 +292,7 @@
             color: #7bed9f;
         }
 
-        /* 關卡按鈕 — 放大 */
+        /* 關卡按鈕 */
         .level-grid {
             display: flex;
             flex-wrap: wrap;
@@ -334,7 +335,7 @@
             filter: drop-shadow(0 0 12px rgba(255, 215, 0, 0.7));
         }
 
-        /* 返回按钮 — 图片按钮 */
+        /* 返回按钮 */
         .back-icon-btn {
             background: none !important;
             border: none !important;
@@ -651,7 +652,6 @@
         .lc-error-list .correct-count { color: #ffd700; font-weight: 700; }
         .lc-error-list .label { color: #aad4e6; }
 
-        /* 完成按钮 */
         .lc-btn-group {
             display: flex;
             gap: 22px;
@@ -919,7 +919,6 @@
             <div class="title" id="level-title">📚 選擇關卡</div>
             <div class="sub" id="level-sub">偏旁配對 · 共 5 關</div>
 
-            <!-- 折叠教学面板 -->
             <details class="tutorial-fold">
                 <summary>📖 遊戲教學</summary>
                 <div class="tutorial-content">
@@ -989,7 +988,7 @@
 
     <script>
         // ================================================================
-        //  📦 字庫資料（保持不變）
+        //  📦 字庫資料
         // ================================================================
         const soundModeData = [
             { target: "青", correct: ["清", "晴", "請", "情", "蜻", "精", "睛", "靖"], distractors: ["抱", "鈴", "放", "很", "河", "拍", "嗎"] },
@@ -1022,7 +1021,7 @@
         }
 
         // ================================================================
-        //  🎯 路徑（固定）
+        //  🎯 路徑
         // ================================================================
         const PATH_OFFSET_X = 3.0;
         const PATH_OFFSET_Y = -2.0;
@@ -1042,73 +1041,102 @@
         const TTS_SPEED = 0.5;
         const TTS_PITCH = 1.05;
 
-        let totalPathLength = 0;
-        let logicTargetCumulativeLength = 0;
+        let progressFn = null;
 
-        function computePathLengths() {
+        function createProgressFunction(points, speedFactors, totalDuration) {
             const segs = [];
-            for (let i = 0; i < PATH_PERCENT.length - 1; i++) {
-                const dx = PATH_PERCENT[i + 1].x - PATH_PERCENT[i].x;
-                const dy = PATH_PERCENT[i + 1].y - PATH_PERCENT[i].y;
+            for (let i = 0; i < points.length - 1; i++) {
+                const dx = points[i + 1].x - points[i].x;
+                const dy = points[i + 1].y - points[i].y;
                 segs.push(Math.sqrt(dx * dx + dy * dy));
             }
-            totalPathLength = segs.reduce((a, b) => a + b, 0);
-            const tempProgressFn = createProgressFunction(PATH_PERCENT, SPEED_FACTORS, TOTAL_DURATION);
-            let bestProgress = 0, bestDist = Infinity;
-            for (let i = 0; i <= 200; i++) {
-                const t = i / 200;
-                const pos = tempProgressFn(t * TOTAL_DURATION);
-                const dx = pos.x - LOGIC_TARGET_POS.x;
-                const dy = pos.y - LOGIC_TARGET_POS.y;
-                const d = dx * dx + dy * dy;
-                if (d < bestDist) { bestDist = d; bestProgress = t; }
+            const weighted = segs.map((len, i) => len / (speedFactors[i] || 1.0));
+            const totalWeight = weighted.reduce((a, b) => a + b, 0);
+            const timeRatios = weighted.map(w => w / totalWeight);
+            const cumTime = [];
+            let cum = 0;
+            for (let i = 0; i < timeRatios.length; i++) {
+                cum += timeRatios[i];
+                cumTime.push(Math.min(cum, 1));
             }
-            const targetProgress = bestProgress;
-            let cumLen = 0;
-            const segCount = segs.length;
-            for (let i = 0; i < segCount; i++) {
-                const segLen = segs[i];
-                const startProgress = i / segCount;
-                const endProgress = (i + 1) / segCount;
-                if (targetProgress >= endProgress) {
-                    cumLen += segLen;
-                } else if (targetProgress > startProgress) {
-                    const localT = (targetProgress - startProgress) / (endProgress - startProgress);
-                    cumLen += segLen * localT;
-                    break;
-                } else { break; }
-            }
-            logicTargetCumulativeLength = cumLen;
-            return { totalPathLength, logicTargetCumulativeLength, targetProgress };
+            return function(elapsed) {
+                if (elapsed <= 0) return { x: points[0].x, y: points[0].y, progress: 0 };
+                if (elapsed >= totalDuration) {
+                    const last = points[points.length - 1];
+                    return { x: last.x, y: last.y, progress: 1 };
+                }
+                const t = elapsed / totalDuration;
+                let segIdx = 0;
+                for (let i = 0; i < cumTime.length; i++) {
+                    if (t <= cumTime[i]) { segIdx = i; break; }
+                }
+                if (segIdx >= cumTime.length) segIdx = cumTime.length - 1;
+                const prevTime = (segIdx === 0) ? 0 : cumTime[segIdx - 1];
+                const segDuration = timeRatios[segIdx];
+                const localT = (t - prevTime) / segDuration;
+                const clampedLocalT = Math.min(Math.max(localT, 0), 1);
+                const p0 = points[segIdx];
+                const p1 = points[segIdx + 1];
+                return {
+                    x: p0.x + (p1.x - p0.x) * clampedLocalT,
+                    y: p0.y + (p1.y - p0.y) * clampedLocalT,
+                    progress: (segIdx + clampedLocalT) / points.length
+                };
+            };
         }
 
-        // ---- DOM ----
+        function buildProgressFn() {
+            progressFn = createProgressFunction(PATH_PERCENT, SPEED_FACTORS, TOTAL_DURATION);
+            document.getElementById('decision-indicator').style.left = VISUAL_TARGET_POS.x + '%';
+            document.getElementById('decision-indicator').style.top = VISUAL_TARGET_POS.y + '%';
+        }
+
+        // ---- DOM 參考 ----
         const $ = id => document.getElementById(id);
-        const menu = $('menu'), levelSelect = $('level-select'), game = $('game');
-        const btnSound = $('btn-sound-mode'), btnRadical = $('btn-radical-mode');
-        const btnStats = $('btn-stats');
+        const menu = $('menu'),
+            levelSelect = $('level-select'),
+            game = $('game');
+        const btnSound = $('btn-sound-mode'),
+            btnRadical = $('btn-radical-mode'),
+            btnStats = $('btn-stats');
         const backToMenu = $('back-to-menu');
-        const levelTitle = $('level-title'), levelSub = $('level-sub'), levelGrid = $('level-grid');
-        const signText = $('sign-text'), signSub = $('sign-sub');
-        const collectDisplay = $('collect-display'), levelDisplay = $('level-display');
-        const marbleContainer = $('marble-container'), waterContainer = $('water-container');
-        const lcOverlay = $('level-complete'), lcIcon = $('lc-icon'), lcMsg = $('lc-msg'), lcSub = $('lc-sub'), lcErrorInfo = $('lc-error-info');
-        const lcBtnGroup = $('lc-btn-group');
-        const river = $('river'), riverBg = $('river-bg'), indicator = $('decision-indicator');
-        const statsModal = $('stats-modal');
-        const statsModalContent = $('stats-modal-content');
+        const levelTitle = $('level-title'),
+            levelSub = $('level-sub'),
+            levelGrid = $('level-grid');
+        const signText = $('sign-text'),
+            signSub = $('sign-sub');
+        const collectDisplay = $('collect-display'),
+            levelDisplay = $('level-display');
+        const marbleContainer = $('marble-container'),
+            waterContainer = $('water-container');
+        const lcOverlay = $('level-complete'),
+            lcIcon = $('lc-icon'),
+            lcMsg = $('lc-msg'),
+            lcSub = $('lc-sub'),
+            lcErrorInfo = $('lc-error-info'),
+            lcBtnGroup = $('lc-btn-group');
+        const river = $('river'),
+            riverBg = $('river-bg'),
+            indicator = $('decision-indicator');
+        const statsModal = $('stats-modal'),
+            statsModalContent = $('stats-modal-content');
 
-        const bgmSlider = $('bgm-volume-slider');
-        const bgmLabel = $('bgm-vol-label');
-        const sfxSlider = $('sfx-volume-slider');
-        const sfxLabel = $('sfx-vol-label');
-        const ttsSlider = $('tts-volume-slider');
-        const ttsLabel = $('tts-vol-label');
+        const bgmSlider = $('bgm-volume-slider'),
+            bgmLabel = $('bgm-vol-label');
+        const sfxSlider = $('sfx-volume-slider'),
+            sfxLabel = $('sfx-vol-label');
+        const ttsSlider = $('tts-volume-slider'),
+            ttsLabel = $('tts-vol-label');
 
-        let bgmVolume = 1.0, sfxVolume = 1.0, ttsVolume = 1.0;
+        let bgmVolume = 1.0,
+            sfxVolume = 1.0,
+            ttsVolume = 1.0;
 
         // ---- 音頻系統 ----
-        let audioCtx = null, masterGain = null, bgmInterval = null, bgmEnabled = false;
+        let audioCtx = null,
+            masterGain = null,
+            bgmInterval = null,
+            bgmEnabled = false;
 
         function initAudio() {
             if (!audioCtx) {
@@ -1120,7 +1148,7 @@
             if (audioCtx.state === 'suspended') {
                 audioCtx.resume();
             }
-            // 启动 BGM（如果尚未启动）
+            // 如果 BGM 未啟動則啟動
             if (!bgmInterval) startBGM();
         }
 
@@ -1137,7 +1165,6 @@
             ttsLabel.textContent = Math.round(ttsVolume * 100) + '%';
         });
 
-        // ---- 音效 ----
         function playTone(freq, dur, type = 'sine', vol = 0.2) {
             try {
                 initAudio();
@@ -1170,7 +1197,6 @@
             [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => playTone(f, 0.12, 'sine', 0.15), i * 90));
         }
 
-        // ---- BGM ----
         function startBGM() {
             if (bgmInterval) return;
             initAudio();
@@ -1216,78 +1242,9 @@
                 clearInterval(bgmInterval);
                 bgmInterval = null;
             }
-            console.log('🎵 BGM 已停止');
         }
 
-        document.addEventListener('visibilitychange', () => {
-            if (document.hidden) {
-                if (bgmInterval) stopBGM();
-            } else {
-                const shouldPlay = !menu.classList.contains('hidden') || game.classList.contains('active');
-                if (shouldPlay && !bgmInterval) startBGM();
-            }
-        });
-
-        // ---- 辅助函数 ----
-        function lerp(a, b, t) { return a + (b - a) * t; }
-
-        function calcSegmentLengths(points) {
-            const segs = [];
-            for (let i = 0; i < points.length - 1; i++) {
-                const dx = points[i + 1].x - points[i].x;
-                const dy = points[i + 1].y - points[i].y;
-                segs.push(Math.sqrt(dx * dx + dy * dy));
-            }
-            return segs;
-        }
-
-        function createProgressFunction(points, speedFactors, totalDuration) {
-            const lengths = calcSegmentLengths(points);
-            const segCount = lengths.length;
-            const weighted = lengths.map((len, i) => len / (speedFactors[i] || 1.0));
-            const totalWeight = weighted.reduce((a, b) => a + b, 0);
-            const timeRatios = weighted.map(w => w / totalWeight);
-            const cumTime = [];
-            let cum = 0;
-            for (let i = 0; i < segCount; i++) {
-                cum += timeRatios[i];
-                cumTime.push(Math.min(cum, 1));
-            }
-            return function(elapsed) {
-                if (elapsed <= 0) return { x: points[0].x, y: points[0].y, progress: 0 };
-                if (elapsed >= totalDuration) {
-                    const last = points[points.length - 1];
-                    return { x: last.x, y: last.y, progress: 1 };
-                }
-                const t = elapsed / totalDuration;
-                let segIdx = 0;
-                for (let i = 0; i < cumTime.length; i++) {
-                    if (t <= cumTime[i]) { segIdx = i; break; }
-                }
-                if (segIdx >= segCount) segIdx = segCount - 1;
-                const prevTime = (segIdx === 0) ? 0 : cumTime[segIdx - 1];
-                const segDuration = timeRatios[segIdx];
-                const localT = (t - prevTime) / segDuration;
-                const clampedLocalT = Math.min(Math.max(localT, 0), 1);
-                const p0 = points[segIdx];
-                const p1 = points[segIdx + 1];
-                return {
-                    x: lerp(p0.x, p1.x, clampedLocalT),
-                    y: lerp(p0.y, p1.y, clampedLocalT),
-                    progress: (segIdx + clampedLocalT) / segCount
-                };
-            };
-        }
-        let progressFn = null;
-
-        function buildProgressFn() {
-            progressFn = createProgressFunction(PATH_PERCENT, SPEED_FACTORS, TOTAL_DURATION);
-            computePathLengths();
-            indicator.style.left = VISUAL_TARGET_POS.x + '%';
-            indicator.style.top = VISUAL_TARGET_POS.y + '%';
-            console.log(`✅ 視覺圈圈: (${VISUAL_TARGET_POS.x}%, ${VISUAL_TARGET_POS.y}%)`);
-        }
-
+        // ---- 語音 ----
         function getVoice() {
             const voices = window.speechSynthesis.getVoices();
             let voice = voices.find(v => v.name.toLowerCase().includes('microsoft tracy'));
@@ -1321,7 +1278,7 @@
 
         function speakChar(char) { speak(char, TTS_SPEED); }
 
-        // ---- 记录系统 ----
+        // ---- 記錄系統 ----
         const STORAGE_KEY = 'qingliu_stats_v2';
 
         function getDefaultStats() {
@@ -1461,14 +1418,8 @@
         }
 
         function closeStatsModal() { statsModal.classList.remove('show'); }
-        btnStats.addEventListener('click', renderStatsModal);
 
-        // ================================================================
-        //  🎮 遊戲邏輯
-        // ================================================================
-        let gameMode = 'sound';
-        let currentLevel = 0;
-        let levelData = null;
+        // ---- 遊戲邏輯 ----
         let marbles = [];
         let collectCount = 0,
             errorCount = 0,
@@ -1484,6 +1435,7 @@
             shuffleOrder = [],
             isPaused = false,
             isGameActive = false;
+        let levelData = null;
 
         let waterParticles = [];
         const WATER_PARTICLE_COUNT = 50;
@@ -1553,13 +1505,9 @@
         }
 
         function initLevel() {
-            console.log(`🔁 初始化關卡: 模式=${selectedMode}, 關卡=${selectedLevel+1}`);
             const data = getLevelData(selectedMode, selectedLevel);
-            if (!data) {
-                selectedLevel = 0;
-                initLevel();
-                return;
-            }
+            if (!data) { selectedLevel = 0;
+                initLevel(); return; }
             levelData = data;
             collectCount = 0;
             errorCount = 0;
@@ -1624,7 +1572,6 @@
                     span.className = 'fallback-char';
                     span.textContent = char;
                     el.appendChild(span);
-                    console.warn(`⚠️ 圖片載入失敗: ${char}，使用備用樣式`);
                 }
             };
             imgTest.src = imgPath;
@@ -1638,7 +1585,6 @@
                             span.className = 'fallback-char';
                             span.textContent = char;
                             el.appendChild(span);
-                            console.warn(`⚠️ 圖片載入逾時: ${char}，使用備用樣式`);
                         }
                     }
                 }, 800);
@@ -1731,7 +1677,6 @@
                         if (!m.spoken) {
                             m.spoken = true;
                             speakChar(m.char);
-                            console.log(`🔊 TTS 觸發 (${m.char}) 距離 ${dist.toFixed(2)}%`);
                         }
                     } else {
                         m.element.classList.remove('in-decision-zone');
@@ -1764,10 +1709,7 @@
                     target = m;
                 }
             }
-            if (!target) {
-                console.log('⚠️ 沒有彈珠在圈圈範圍內，無法選取');
-                return;
-            }
+            if (!target) return;
             collectMarble(target);
         }
 
@@ -1787,7 +1729,8 @@
                 soundError();
             }
             const el = m.element;
-            el.style.transition = 'left 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), top 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), width 0.8s ease, height 0.8s ease, transform 0.8s ease';
+            el.style.transition =
+                'left 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), top 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), width 0.8s ease, height 0.8s ease, transform 0.8s ease';
             el.style.left = COLLECTION_POINT.x + '%';
             el.style.top = COLLECTION_POINT.y + '%';
             el.style.transform = 'scale(0) rotate(20deg)';
@@ -1860,7 +1803,6 @@
                     }
                 });
             }
-            // status === 'complete' 时不添加第三个按钮
 
             btnConfigs.forEach(cfg => {
                 const btn = document.createElement('button');
@@ -1966,7 +1908,6 @@
             ttsSlider.value = ttsVolume;
             ttsLabel.textContent = Math.round(ttsVolume * 100) + '%';
             initLevel();
-            console.log(`🎯 開始遊戲: 模式=${selectedMode}, 關卡=${selectedLevel+1}`);
         }
 
         function goToLevelSelect() {
@@ -2002,28 +1943,65 @@
             }
         }
 
-        // ---- 按鈕事件 ----
-        btnSound.addEventListener('click', () => {
-            initAudio();
-            showLevelSelect('sound');
-        });
-        btnRadical.addEventListener('click', () => {
-            initAudio();
-            showLevelSelect('radical');
-        });
-        backToMenu.addEventListener('click', goToMenu);
-        document.getElementById('btn-back').addEventListener('click', goToLevelSelect);
+        // ================================================================
+        //  事件綁定（確保按鈕可點擊）
+        // ================================================================
+        document.addEventListener('DOMContentLoaded', function() {
+            // 記錄按鈕
+            btnStats.addEventListener('click', function(e) {
+                e.preventDefault();
+                initAudio();
+                renderStatsModal();
+                console.log('📊 記錄按鈕被點擊');
+            });
 
-        // ---- 鍵盤 ----
+            // 偏旁配對
+            btnSound.addEventListener('click', function(e) {
+                e.preventDefault();
+                initAudio();
+                console.log('🔊 偏旁配對按鈕被點擊');
+                showLevelSelect('sound');
+            });
+
+            // 部首配對
+            btnRadical.addEventListener('click', function(e) {
+                e.preventDefault();
+                initAudio();
+                console.log('📖 部首配對按鈕被點擊');
+                showLevelSelect('radical');
+            });
+
+            // 返回按鈕（關卡選擇）
+            backToMenu.addEventListener('click', function(e) {
+                e.preventDefault();
+                goToMenu();
+            });
+
+            // 遊戲內返回
+            document.getElementById('btn-back').addEventListener('click', function(e) {
+                e.preventDefault();
+                goToLevelSelect();
+            });
+
+            // 任何點擊或觸摸都嘗試啟動音頻
+            document.addEventListener('click', function() {
+                initAudio();
+            }, { once: false });
+            document.addEventListener('touchstart', function() {
+                initAudio();
+            }, { once: false });
+
+            console.log('✅ 所有按鈕事件已綁定');
+        });
+
+        // ---- 鍵盤與陀螺儀 ----
         document.addEventListener('keydown', (e) => {
             if (e.key === 'ArrowLeft' || e.key === 'Left') {
                 e.preventDefault();
                 if (game.classList.contains('active') && !lcOverlay.classList.contains('show')) triggerLeft();
             }
-            if (e.key === 'ArrowRight' || e.key === 'Right') e.preventDefault();
         });
 
-        // ---- 陀螺儀 ----
         let leftTriggered = false;
 
         function handleOrientation(e) {
@@ -2046,13 +2024,11 @@
             }
         }
 
-        // ---- 防止觸控 ----
+        // ---- 防止觸控滾動 ----
         document.addEventListener('touchmove', (e) => { if (e.target.closest('#app')) e.preventDefault(); }, { passive: false });
         document.addEventListener('visibilitychange', () => { isPaused = document.hidden; });
 
-        // ---- 預載 ----
-        document.addEventListener('click', () => { initAudio(); }, { once: true });
-        document.addEventListener('touchstart', () => { initAudio(); }, { once: true });
+        // ---- 語音預載 ----
         window.speechSynthesis.getVoices();
 
         // ---- 初始化 ----
@@ -2062,9 +2038,9 @@
         game.classList.remove('active');
         selectedMode = 'sound';
         selectedLevel = 0;
-        // 先不自动启动 BGM，等用户交互
         console.log('🌊 青流字旅 · 文字漂流記 已啟動');
         console.log('📁 圖片路徑：marble/ 和 asset/ 資料夾');
+        console.log('💡 提示：點擊任何按鈕會啟動 BGM 與音效');
     </script>
 </body>
 </html>
