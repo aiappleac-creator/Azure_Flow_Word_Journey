@@ -150,7 +150,7 @@
             z-index: -1;
         }
 
-        /* ===== 音量面板 — 原始正确尺寸 ===== */
+        /* ===== 音量面板 ===== */
         .menu-volume {
             position: absolute;
             bottom: 20px;
@@ -217,7 +217,7 @@
             z-index: -1;
         }
 
-        /* ----- 折叠教学面板（可滚动） ----- */
+        /* ----- 折叠教学面板 ----- */
         .tutorial-fold {
             width: 100%;
             max-width: 520px;
@@ -291,7 +291,7 @@
             color: #7bed9f;
         }
 
-        /* 關卡按鈕 — 放大 */
+        /* 關卡按鈕 */
         .level-grid {
             display: flex;
             flex-wrap: wrap;
@@ -334,7 +334,7 @@
             filter: drop-shadow(0 0 12px rgba(255, 215, 0, 0.7));
         }
 
-        /* 返回按钮 — 图片按钮 */
+        /* 返回按钮 */
         .back-icon-btn {
             background: none !important;
             border: none !important;
@@ -611,7 +611,7 @@
             font-size: 0.7rem;
         }
 
-        /* ===== 關卡完成介面（图片按钮，220px） ===== */
+        /* ===== 關卡完成介面 ===== */
         #level-complete {
             position: absolute;
             inset: 0;
@@ -651,7 +651,6 @@
         .lc-error-list .correct-count { color: #ffd700; font-weight: 700; }
         .lc-error-list .label { color: #aad4e6; }
 
-        /* 完成界面的三个图片按钮 — 220px */
         .lc-btn-group {
             display: flex;
             gap: 22px;
@@ -685,8 +684,6 @@
             filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.3));
             border-radius: 8px;
         }
-
-        /* 备选文字（图片加载失败时显示） */
         .lc-btn-group .lc-icon-btn .fallback-label {
             display: none;
             font-size: 0.9rem;
@@ -854,7 +851,6 @@
         }
         .stats-modal .close-btn:hover { background: rgba(255, 255, 255, 0.25); }
         .stats-modal .close-btn:active { transform: scale(0.95); }
-        /* 清除记录按钮 */
         .stats-modal .clear-btn {
             display: block;
             margin: 12px auto 0;
@@ -902,7 +898,7 @@
                 </button>
             </div>
 
-            <!-- 音量面板 — 原始正确尺寸 -->
+            <!-- 音量面板 -->
             <div class="menu-volume">
                 <div class="vol-row">
                     <label>🎵 BGM</label>
@@ -922,7 +918,6 @@
             <div class="title" id="level-title">📚 選擇關卡</div>
             <div class="sub" id="level-sub">偏旁配對 · 共 5 關</div>
 
-            <!-- 折叠教学面板 -->
             <details class="tutorial-fold">
                 <summary>📖 遊戲教學</summary>
                 <div class="tutorial-content">
@@ -934,7 +929,6 @@
             </details>
 
             <div class="level-grid" id="level-grid"></div>
-            <!-- 返回按钮改为图片 -->
             <button class="back-icon-btn" id="back-to-menu">
                 <img src="asset/back_icon.png" alt="返回選單" />
             </button>
@@ -970,15 +964,12 @@
                 </div>
             </div>
 
-            <!-- 完成界面 -->
             <div id="level-complete">
                 <div class="lc-icon" id="lc-icon">🎉</div>
                 <div class="lc-msg" id="lc-msg">太棒了！</div>
                 <div class="lc-sub" id="lc-sub">進入下一關</div>
                 <div id="lc-error-info" class="lc-error-list"></div>
-                <div class="lc-btn-group" id="lc-btn-group">
-                    <!-- 三个图片按钮由 JavaScript 动态生成 -->
-                </div>
+                <div class="lc-btn-group" id="lc-btn-group"></div>
             </div>
         </div>
 
@@ -996,7 +987,7 @@
 
     <script>
         // ================================================================
-        //  📦 字庫資料（保持不變）
+        //  📦 字庫資料
         // ================================================================
         const soundModeData = [
             { target: "青", correct: ["清", "晴", "請", "情", "蜻", "精", "睛", "靖"], distractors: ["抱", "鈴", "放", "很", "河", "拍", "嗎"] },
@@ -1029,7 +1020,7 @@
         }
 
         // ================================================================
-        //  🎯 路徑（固定）
+        //  🎯 路徑
         // ================================================================
         const PATH_OFFSET_X = 3.0;
         const PATH_OFFSET_Y = -2.0;
@@ -1049,73 +1040,103 @@
         const TTS_SPEED = 0.5;
         const TTS_PITCH = 1.05;
 
-        let totalPathLength = 0;
-        let logicTargetCumulativeLength = 0;
+        let progressFn = null;
 
-        function computePathLengths() {
+        function createProgressFunction(points, speedFactors, totalDuration) {
             const segs = [];
-            for (let i = 0; i < PATH_PERCENT.length - 1; i++) {
-                const dx = PATH_PERCENT[i + 1].x - PATH_PERCENT[i].x;
-                const dy = PATH_PERCENT[i + 1].y - PATH_PERCENT[i].y;
+            for (let i = 0; i < points.length - 1; i++) {
+                const dx = points[i + 1].x - points[i].x;
+                const dy = points[i + 1].y - points[i].y;
                 segs.push(Math.sqrt(dx * dx + dy * dy));
             }
-            totalPathLength = segs.reduce((a, b) => a + b, 0);
-            const tempProgressFn = createProgressFunction(PATH_PERCENT, SPEED_FACTORS, TOTAL_DURATION);
-            let bestProgress = 0, bestDist = Infinity;
-            for (let i = 0; i <= 200; i++) {
-                const t = i / 200;
-                const pos = tempProgressFn(t * TOTAL_DURATION);
-                const dx = pos.x - LOGIC_TARGET_POS.x;
-                const dy = pos.y - LOGIC_TARGET_POS.y;
-                const d = dx * dx + dy * dy;
-                if (d < bestDist) { bestDist = d; bestProgress = t; }
+            const weighted = segs.map((len, i) => len / (speedFactors[i] || 1.0));
+            const totalWeight = weighted.reduce((a, b) => a + b, 0);
+            const timeRatios = weighted.map(w => w / totalWeight);
+            const cumTime = [];
+            let cum = 0;
+            for (let i = 0; i < timeRatios.length; i++) {
+                cum += timeRatios[i];
+                cumTime.push(Math.min(cum, 1));
             }
-            const targetProgress = bestProgress;
-            let cumLen = 0;
-            const segCount = segs.length;
-            for (let i = 0; i < segCount; i++) {
-                const segLen = segs[i];
-                const startProgress = i / segCount;
-                const endProgress = (i + 1) / segCount;
-                if (targetProgress >= endProgress) {
-                    cumLen += segLen;
-                } else if (targetProgress > startProgress) {
-                    const localT = (targetProgress - startProgress) / (endProgress - startProgress);
-                    cumLen += segLen * localT;
-                    break;
-                } else { break; }
-            }
-            logicTargetCumulativeLength = cumLen;
-            return { totalPathLength, logicTargetCumulativeLength, targetProgress };
+            return function(elapsed) {
+                if (elapsed <= 0) return { x: points[0].x, y: points[0].y, progress: 0 };
+                if (elapsed >= totalDuration) {
+                    const last = points[points.length - 1];
+                    return { x: last.x, y: last.y, progress: 1 };
+                }
+                const t = elapsed / totalDuration;
+                let segIdx = 0;
+                for (let i = 0; i < cumTime.length; i++) {
+                    if (t <= cumTime[i]) { segIdx = i; break; }
+                }
+                if (segIdx >= cumTime.length) segIdx = cumTime.length - 1;
+                const prevTime = (segIdx === 0) ? 0 : cumTime[segIdx - 1];
+                const segDuration = timeRatios[segIdx];
+                const localT = (t - prevTime) / segDuration;
+                const clampedLocalT = Math.min(Math.max(localT, 0), 1);
+                const p0 = points[segIdx];
+                const p1 = points[segIdx + 1];
+                return {
+                    x: p0.x + (p1.x - p0.x) * clampedLocalT,
+                    y: p0.y + (p1.y - p0.y) * clampedLocalT,
+                    progress: (segIdx + clampedLocalT) / points.length
+                };
+            };
         }
 
-        // ---- DOM ----
+        function buildProgressFn() {
+            progressFn = createProgressFunction(PATH_PERCENT, SPEED_FACTORS, TOTAL_DURATION);
+            document.getElementById('decision-indicator').style.left = VISUAL_TARGET_POS.x + '%';
+            document.getElementById('decision-indicator').style.top = VISUAL_TARGET_POS.y + '%';
+        }
+
+        // ---- DOM 參考 ----
         const $ = id => document.getElementById(id);
-        const menu = $('menu'), levelSelect = $('level-select'), game = $('game');
-        const btnSound = $('btn-sound-mode'), btnRadical = $('btn-radical-mode');
-        const btnStats = $('btn-stats');
+        const menu = $('menu'),
+            levelSelect = $('level-select'),
+            game = $('game');
+        const btnSound = $('btn-sound-mode'),
+            btnRadical = $('btn-radical-mode'),
+            btnStats = $('btn-stats');
         const backToMenu = $('back-to-menu');
-        const levelTitle = $('level-title'), levelSub = $('level-sub'), levelGrid = $('level-grid');
-        const signText = $('sign-text'), signSub = $('sign-sub');
-        const collectDisplay = $('collect-display'), levelDisplay = $('level-display');
-        const marbleContainer = $('marble-container'), waterContainer = $('water-container');
-        const lcOverlay = $('level-complete'), lcIcon = $('lc-icon'), lcMsg = $('lc-msg'), lcSub = $('lc-sub'), lcErrorInfo = $('lc-error-info');
-        const lcBtnGroup = $('lc-btn-group');
-        const river = $('river'), riverBg = $('river-bg'), indicator = $('decision-indicator');
-        const statsModal = $('stats-modal');
-        const statsModalContent = $('stats-modal-content');
+        const levelTitle = $('level-title'),
+            levelSub = $('level-sub'),
+            levelGrid = $('level-grid');
+        const signText = $('sign-text'),
+            signSub = $('sign-sub');
+        const collectDisplay = $('collect-display'),
+            levelDisplay = $('level-display');
+        const marbleContainer = $('marble-container'),
+            waterContainer = $('water-container');
+        const lcOverlay = $('level-complete'),
+            lcIcon = $('lc-icon'),
+            lcMsg = $('lc-msg'),
+            lcSub = $('lc-sub'),
+            lcErrorInfo = $('lc-error-info'),
+            lcBtnGroup = $('lc-btn-group');
+        const river = $('river'),
+            riverBg = $('river-bg'),
+            indicator = $('decision-indicator');
+        const statsModal = $('stats-modal'),
+            statsModalContent = $('stats-modal-content');
 
-        const bgmSlider = $('bgm-volume-slider');
-        const bgmLabel = $('bgm-vol-label');
-        const sfxSlider = $('sfx-volume-slider');
-        const sfxLabel = $('sfx-vol-label');
-        const ttsSlider = $('tts-volume-slider');
-        const ttsLabel = $('tts-vol-label');
+        const bgmSlider = $('bgm-volume-slider'),
+            bgmLabel = $('bgm-vol-label');
+        const sfxSlider = $('sfx-volume-slider'),
+            sfxLabel = $('sfx-vol-label');
+        const ttsSlider = $('tts-volume-slider'),
+            ttsLabel = $('tts-vol-label');
 
-        let bgmVolume = 1.0, sfxVolume = 1.0, ttsVolume = 1.0;
+        let bgmVolume = 1.0,
+            sfxVolume = 1.0,
+            ttsVolume = 1.0;
 
         // ---- 音頻系統 ----
-        let audioCtx = null, masterGain = null, bgmInterval = null, bgmEnabled = false;
+        let audioCtx = null,
+            masterGain = null,
+            bgmInterval = null,
+            bgmEnabled = false;
+
         function initAudio() {
             if (!audioCtx) {
                 audioCtx = new(window.AudioContext || window.webkitAudioContext)();
@@ -1123,10 +1144,13 @@
                 masterGain.gain.value = 1;
                 masterGain.connect(audioCtx.destination);
             }
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-            // ★ 關鍵修正：每次呼叫 initAudio 都嘗試啟動 BGM
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            // 關鍵：每次呼叫都嘗試啟動 BGM（僅當尚未啟動時）
             if (!bgmInterval) startBGM();
         }
+
         bgmSlider.addEventListener('input', () => {
             bgmVolume = parseFloat(bgmSlider.value);
             bgmLabel.textContent = Math.round(bgmVolume * 100) + '%';
@@ -1156,10 +1180,21 @@
                 osc.stop(audioCtx.currentTime + dur);
             } catch (_) {}
         }
-        function soundDing() { playTone(880, 0.15); setTimeout(() => playTone(1100, 0.1), 70); }
-        function soundError() { playTone(200, 0.15, 'sawtooth', 0.2); setTimeout(() => playTone(150, 0.15, 'sawtooth', 0.18), 120); }
-        function soundWater() { playTone(180, 0.3, 'sine', 0.06); setTimeout(() => playTone(140, 0.35, 'sine', 0.05), 120); }
-        function soundLevelUp() { [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => playTone(f, 0.12, 'sine', 0.15), i * 90)); }
+
+        function soundDing() { playTone(880, 0.15);
+            setTimeout(() => playTone(1100, 0.1), 70); }
+
+        function soundError() {
+            playTone(200, 0.15, 'sawtooth', 0.2);
+            setTimeout(() => playTone(150, 0.15, 'sawtooth', 0.18), 120);
+        }
+
+        function soundWater() { playTone(180, 0.3, 'sine', 0.06);
+            setTimeout(() => playTone(140, 0.35, 'sine', 0.05), 120); }
+
+        function soundLevelUp() {
+            [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => playTone(f, 0.12, 'sine', 0.15), i * 90));
+        }
 
         function startBGM() {
             if (bgmInterval) return;
@@ -1199,65 +1234,28 @@
             }, 700);
             console.log('🎵 BGM 已啟動');
         }
+
         function stopBGM() {
             bgmEnabled = false;
-            if (bgmInterval) { clearInterval(bgmInterval); bgmInterval = null; }
+            if (bgmInterval) { clearInterval(bgmInterval);
+                bgmInterval = null; }
         }
+
         document.addEventListener('visibilitychange', () => {
-            if (document.hidden) { if (bgmInterval) stopBGM(); } else { const shouldPlay = !menu.classList.contains('hidden') || game.classList.contains('active'); if (shouldPlay && !bgmInterval) startBGM(); }
+            if (document.hidden) { if (bgmInterval) stopBGM(); } else { const shouldPlay = !menu.classList.contains(
+                    'hidden') || game.classList.contains('active'); if (shouldPlay && !bgmInterval) startBGM(); }
         });
 
-        function lerp(a, b, t) { return a + (b - a) * t; }
-        function calcSegmentLengths(points) {
-            const segs = [];
-            for (let i = 0; i < points.length - 1; i++) {
-                const dx = points[i + 1].x - points[i].x;
-                const dy = points[i + 1].y - points[i].y;
-                segs.push(Math.sqrt(dx * dx + dy * dy));
-            }
-            return segs;
-        }
-        function createProgressFunction(points, speedFactors, totalDuration) {
-            const lengths = calcSegmentLengths(points);
-            const segCount = lengths.length;
-            const weighted = lengths.map((len, i) => len / (speedFactors[i] || 1.0));
-            const totalWeight = weighted.reduce((a, b) => a + b, 0);
-            const timeRatios = weighted.map(w => w / totalWeight);
-            const cumTime = [];
-            let cum = 0;
-            for (let i = 0; i < segCount; i++) {
-                cum += timeRatios[i];
-                cumTime.push(Math.min(cum, 1));
-            }
-            return function(elapsed) {
-                if (elapsed <= 0) return { x: points[0].x, y: points[0].y, progress: 0 };
-                if (elapsed >= totalDuration) { const last = points[points.length - 1]; return { x: last.x, y: last.y, progress: 1 }; }
-                const t = elapsed / totalDuration;
-                let segIdx = 0;
-                for (let i = 0; i < cumTime.length; i++) { if (t <= cumTime[i]) { segIdx = i; break; } }
-                if (segIdx >= segCount) segIdx = segCount - 1;
-                const prevTime = (segIdx === 0) ? 0 : cumTime[segIdx - 1];
-                const segDuration = timeRatios[segIdx];
-                const localT = (t - prevTime) / segDuration;
-                const clampedLocalT = Math.min(Math.max(localT, 0), 1);
-                const p0 = points[segIdx];
-                const p1 = points[segIdx + 1];
-                return { x: lerp(p0.x, p1.x, clampedLocalT), y: lerp(p0.y, p1.y, clampedLocalT), progress: (segIdx + clampedLocalT) / segCount };
-            };
-        }
-        let progressFn = null;
-        function buildProgressFn() {
-            progressFn = createProgressFunction(PATH_PERCENT, SPEED_FACTORS, TOTAL_DURATION);
-            computePathLengths();
-            indicator.style.left = VISUAL_TARGET_POS.x + '%';
-            indicator.style.top = VISUAL_TARGET_POS.y + '%';
-        }
-
+        // ---- 語音 ----
         function getVoice() {
             const voices = window.speechSynthesis.getVoices();
             let voice = voices.find(v => v.name.toLowerCase().includes('microsoft tracy'));
             if (voice) return voice;
-            const preferred = ['Google 粵語（香港）', 'Google 香港粵語', 'Google Cantonese', 'Microsoft 慧慧', 'Microsoft Huihui', 'Microsoft 雅婷', 'Ting-Ting', 'Zira', 'Yating'];
+            const preferred = [
+                'Google 粵語（香港）', 'Google 香港粵語', 'Google Cantonese',
+                'Microsoft 慧慧', 'Microsoft Huihui', 'Microsoft 雅婷',
+                'Ting-Ting', 'Zira', 'Yating'
+            ];
             for (const name of preferred) {
                 const found = voices.find(v => v.lang === 'zh-HK' && v.name.includes(name));
                 if (found) return found;
@@ -1267,6 +1265,7 @@
             fallback = voices.find(v => v.lang.startsWith('zh'));
             return fallback || null;
         }
+
         function speak(text, rate = TTS_SPEED) {
             if (!window.speechSynthesis) return;
             const voice = getVoice();
@@ -1278,13 +1277,19 @@
             u.volume = ttsVolume;
             window.speechSynthesis.speak(u);
         }
+
         function speakChar(char) { speak(char, TTS_SPEED); }
 
         // ---- 記錄系統 ----
         const STORAGE_KEY = 'qingliu_stats_v2';
+
         function getDefaultStats() {
-            return { sound: { history: [], totalCorrect: 0, totalErrors: 0 }, radical: { history: [], totalCorrect: 0, totalErrors: 0 } };
+            return {
+                sound: { history: [], totalCorrect: 0, totalErrors: 0 },
+                radical: { history: [], totalCorrect: 0, totalErrors: 0 }
+            };
         }
+
         function loadStats() {
             try {
                 const raw = localStorage.getItem(STORAGE_KEY);
@@ -1310,14 +1315,26 @@
             } catch (e) { console.warn('讀取記錄失敗', e); }
             return getDefaultStats();
         }
-        function saveStats(stats) { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(stats)); } catch (e) { console.warn('儲存記錄失敗', e); } }
+
+        function saveStats(stats) {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(stats));
+            } catch (e) { console.warn('儲存記錄失敗', e); }
+        }
+
         function addHistory(mode, level, correctList, collected, errors, completed) {
             const stats = loadStats();
             const now = new Date();
-            const timestamp = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
-            stats[mode].history.push({ timestamp, level, correctList: correctList.slice(), collected: collected.slice(), errors: errors.slice(), completed });
-            let totalCorrect = 0, totalErrors = 0;
-            for (const e of stats[mode].history) { totalCorrect += e.collected.length; totalErrors += e.errors.length; }
+            const timestamp =
+                `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+            stats[mode].history.push({ timestamp, level, correctList: correctList.slice(), collected: collected.slice(),
+                errors: errors.slice(), completed });
+            let totalCorrect = 0,
+                totalErrors = 0;
+            for (const e of stats[mode].history) {
+                totalCorrect += e.collected.length;
+                totalErrors += e.errors.length;
+            }
             stats[mode].totalCorrect = totalCorrect;
             stats[mode].totalErrors = totalErrors;
             saveStats(stats);
@@ -1326,7 +1343,7 @@
         function clearAllRecords() {
             if (confirm('確定要清除所有遊戲記錄嗎？此操作無法復原。')) {
                 localStorage.removeItem(STORAGE_KEY);
-                renderStatsModal(); // 重新渲染
+                renderStatsModal();
             }
         }
 
@@ -1337,36 +1354,59 @@
                 const modeLabel = mode === 'sound' ? '🔊 偏旁配對' : '📖 部首配對';
                 const history = stats[mode].history;
                 const completedMap = {};
-                for (const entry of history) { if (entry.completed) completedMap[entry.level] = true; }
+                for (const entry of history) {
+                    if (entry.completed) completedMap[entry.level] = true;
+                }
                 const totalLevels = 5;
                 let completedCount = 0;
-                for (let i = 0; i < totalLevels; i++) { if (completedMap[i]) completedCount++; }
+                for (let i = 0; i < totalLevels; i++) {
+                    if (completedMap[i]) completedCount++;
+                }
                 let dotsHtml = '';
                 for (let i = 0; i < totalLevels; i++) {
                     const cls = completedMap[i] ? 'dot done' : 'dot pending';
                     const symbol = completedMap[i] ? '✓' : '·';
                     dotsHtml += `<span class="${cls}">${symbol}</span>`;
                 }
-                html += `<div class="stat-block"><div class="mode-title">${modeLabel}</div><div class="stat-row"><span class="stat-label">進度</span><span class="stat-value">${completedCount} / ${totalLevels}</span></div><div class="stat-row"><span class="stat-label">正確收集</span><span class="stat-value">${stats[mode].totalCorrect}</span></div><div class="stat-row"><span class="stat-label">誤選次數</span><span class="stat-value">${stats[mode].totalErrors}</span></div><div class="stat-row" style="border-bottom: none; padding-bottom: 0;"><span class="stat-label">關卡狀態</span><span class="level-dots">${dotsHtml}</span></div>`;
+                html += `
+                    <div class="stat-block">
+                        <div class="mode-title">${modeLabel}</div>
+                        <div class="stat-row"><span class="stat-label">進度</span><span class="stat-value">${completedCount} / ${totalLevels}</span></div>
+                        <div class="stat-row"><span class="stat-label">正確收集</span><span class="stat-value">${stats[mode].totalCorrect}</span></div>
+                        <div class="stat-row"><span class="stat-label">誤選次數</span><span class="stat-value">${stats[mode].totalErrors}</span></div>
+                        <div class="stat-row" style="border-bottom: none; padding-bottom: 0;">
+                            <span class="stat-label">關卡狀態</span>
+                            <span class="level-dots">${dotsHtml}</span>
+                        </div>
+                `;
                 for (let level = 0; level < totalLevels; level++) {
                     const levelHistory = history.filter(e => e.level === level);
                     if (levelHistory.length === 0) continue;
                     levelHistory.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
-                    html += `<div style="margin-top:8px; border-top:1px solid rgba(255,255,255,0.06); padding-top:6px;"><div style="font-size:0.9rem; font-weight:500; color:#b3e4ff;">第 ${level+1} 關</div><div class="history-list">`;
+                    html += `<div style="margin-top:8px; border-top:1px solid rgba(255,255,255,0.06); padding-top:6px;">
+                        <div style="font-size:0.9rem; font-weight:500; color:#b3e4ff;">第 ${level+1} 關</div>
+                        <div class="history-list">`;
                     for (const entry of levelHistory) {
                         const missing = entry.correctList.filter(ch => !entry.collected.includes(ch));
                         const statusText = entry.completed ? '✅ 完成' : '⏳ 未完成';
                         const statusCls = entry.completed ? 'done' : 'fail';
-                        html += `<div class="history-item"><span class="time">${entry.timestamp}</span><span class="detail">`;
-                        if (missing.length > 0) { const missStr = missing.map(ch => `<span class="char-item missing">${ch}</span>`).join(''); html += `遺漏：${missStr} `; } else { html += `遺漏：無 `; }
-                        if (entry.errors.length > 0) { const errStr = entry.errors.map(ch => `<span class="char-item error">${ch}</span>`).join(''); html += `誤選：${errStr} `; } else { html += `誤選：無 `; }
+                        html += `<div class="history-item">
+                            <span class="time">${entry.timestamp}</span>
+                            <span class="detail">`;
+                        if (missing.length > 0) {
+                            const missStr = missing.map(ch => `<span class="char-item missing">${ch}</span>`).join('');
+                            html += `遺漏：${missStr} `;
+                        } else { html += `遺漏：無 `; }
+                        if (entry.errors.length > 0) {
+                            const errStr = entry.errors.map(ch => `<span class="char-item error">${ch}</span>`).join('');
+                            html += `誤選：${errStr} `;
+                        } else { html += `誤選：無 `; }
                         html += `</span><span class="status ${statusCls}">${statusText}</span></div>`;
                     }
                     html += `</div></div>`;
                 }
                 html += `</div>`;
             }
-            // 清除记录按钮
             html += `<button class="clear-btn" id="clear-records-btn">🗑️ 清除所有記錄</button>`;
             html += `<button class="close-btn" id="close-stats-modal">關閉</button>`;
             statsModalContent.innerHTML = html;
@@ -1378,23 +1418,30 @@
             clearBtn.addEventListener('click', clearAllRecords);
             statsModal.addEventListener('click', (e) => { if (e.target === statsModal) closeStatsModal(); });
         }
-        function closeStatsModal() { statsModal.classList.remove('show'); }
-        btnStats.addEventListener('click', renderStatsModal);
 
-        // ================================================================
-        //  🎮 遊戲邏輯
-        // ================================================================
-        let gameMode = 'sound';
-        let currentLevel = 0;
-        let levelData = null;
+        function closeStatsModal() { statsModal.classList.remove('show'); }
+
+        // ---- 遊戲邏輯 ----
         let marbles = [];
-        let collectCount = 0, errorCount = 0, errorChars = [], collectedChars = [];
-        let isPlaying = false, isLevelComplete = false, gameEnded = false;
-        let marbleTimer = null, animFrameId = null, waterAnimId = null;
-        let pendingIndex = 0, shuffleOrder = [], isPaused = false, isGameActive = false;
+        let collectCount = 0,
+            errorCount = 0,
+            errorChars = [],
+            collectedChars = [];
+        let isPlaying = false,
+            isLevelComplete = false,
+            gameEnded = false;
+        let marbleTimer = null,
+            animFrameId = null,
+            waterAnimId = null;
+        let pendingIndex = 0,
+            shuffleOrder = [],
+            isPaused = false,
+            isGameActive = false;
+        let levelData = null;
 
         let waterParticles = [];
         const WATER_PARTICLE_COUNT = 50;
+
         function createWaterParticles() {
             waterParticles = [];
             waterContainer.innerHTML = '';
@@ -1413,16 +1460,25 @@
                 const scale = 0.3 + progress * 15.0;
                 const offX = (Math.random() - 0.5) * scale;
                 const offY = (Math.random() - 0.5) * scale;
-                waterParticles.push({ element: el, startOffset, offX, offY, size });
+                waterParticles.push({
+                    element: el,
+                    startOffset: startOffset,
+                    offX: offX,
+                    offY: offY,
+                    size: size
+                });
             }
         }
+
         function updateWaterParticles(elapsed) {
             if (!progressFn) return;
             for (const p of waterParticles) {
                 const t = (elapsed + p.startOffset) % TOTAL_DURATION;
                 const pos = progressFn(t);
-                let x = pos.x + p.offX, y = pos.y + p.offY;
-                x = Math.max(0, Math.min(100, x)); y = Math.max(0, Math.min(100, y));
+                let x = pos.x + p.offX;
+                let y = pos.y + p.offY;
+                x = Math.max(0, Math.min(100, x));
+                y = Math.max(0, Math.min(100, y));
                 p.element.style.left = x + '%';
                 p.element.style.top = y + '%';
                 const progress = t / TOTAL_DURATION;
@@ -1431,12 +1487,18 @@
                 p.element.style.opacity = alpha * brightness * 0.8;
             }
         }
+
         let waterStartTime = 0;
+
         function startWaterAnimation() {
             if (waterAnimId) cancelAnimationFrame(waterAnimId);
             waterStartTime = performance.now();
+
             function waterLoop(timestamp) {
-                if (!isPlaying || isPaused || !isGameActive) { waterAnimId = requestAnimationFrame(waterLoop); return; }
+                if (!isPlaying || isPaused || !isGameActive) {
+                    waterAnimId = requestAnimationFrame(waterLoop);
+                    return;
+                }
                 const elapsed = (timestamp - waterStartTime) / 1000;
                 updateWaterParticles(elapsed);
                 waterAnimId = requestAnimationFrame(waterLoop);
@@ -1446,11 +1508,18 @@
 
         function initLevel() {
             const data = getLevelData(selectedMode, selectedLevel);
-            if (!data) { selectedLevel = 0; initLevel(); return; }
+            if (!data) { selectedLevel = 0;
+                initLevel(); return; }
             levelData = data;
-            collectCount = 0; errorCount = 0; errorChars = []; collectedChars = [];
-            isLevelComplete = false; gameEnded = false; pendingIndex = 0;
-            marbles = []; shuffleOrder = data.order;
+            collectCount = 0;
+            errorCount = 0;
+            errorChars = [];
+            collectedChars = [];
+            isLevelComplete = false;
+            gameEnded = false;
+            pendingIndex = 0;
+            marbles = [];
+            shuffleOrder = data.order;
             signText.textContent = data.targetDisplay;
             signSub.textContent = data.subDisplay;
             collectDisplay.textContent = '0／8';
@@ -1469,7 +1538,9 @@
         function startMarbleGeneration() {
             if (marbleTimer) clearInterval(marbleTimer);
             if (animFrameId) cancelAnimationFrame(animFrameId);
-            pendingIndex = 0; marbles = []; marbleContainer.innerHTML = '';
+            pendingIndex = 0;
+            marbles = [];
+            marbleContainer.innerHTML = '';
             marbleTimer = setInterval(() => {
                 if (isPaused || isLevelComplete || !isPlaying || !isGameActive) return;
                 if (pendingIndex >= shuffleOrder.length) return;
@@ -1484,13 +1555,17 @@
             const char = shuffleOrder[pendingIndex];
             const isCorrect = levelData.correct.includes(char);
             pendingIndex++;
+
             const el = document.createElement('div');
             el.className = 'marble';
-            const imgPath = `marble/${char}.png`;  // ★ 修改為 marble/
+            const imgPath = `marble/${char}.png`;
             el.style.backgroundImage = `url(${imgPath})`;
+
             const imgTest = new Image();
             let fallbackUsed = false;
-            imgTest.onload = function() { if (!fallbackUsed) { console.log(`✅ 載入彈珠圖片: ${char}`); } };
+            imgTest.onload = function() {
+                if (!fallbackUsed) { console.log(`✅ 載入彈珠圖片: ${char}`); }
+            };
             imgTest.onerror = function() {
                 if (!fallbackUsed) {
                     fallbackUsed = true;
@@ -1502,7 +1577,7 @@
                 }
             };
             imgTest.src = imgPath;
-            if (imgTest.complete && imgTest.naturalWidth > 0) { } else {
+            if (imgTest.complete && imgTest.naturalWidth > 0) {} else {
                 setTimeout(() => {
                     if (imgTest.naturalWidth === 0 || imgTest.naturalHeight === 0) {
                         if (!fallbackUsed) {
@@ -1516,22 +1591,45 @@
                     }
                 }, 800);
             }
+
             const baseSize = Math.min(window.innerWidth * 0.22, window.innerHeight * 0.22, 200);
             const finalSize = Math.max(baseSize, 80);
             el.style.width = finalSize + 'px';
             el.style.height = finalSize + 'px';
+
             const startPos = PATH_PERCENT[0];
             el.style.left = startPos.x + '%';
             el.style.top = startPos.y + '%';
             el.style.pointerEvents = 'auto';
             el.style.opacity = '1';
-            el.addEventListener('click', (e) => { e.stopPropagation(); if (marble.state === 'falling' && !marble.collected) speakChar(char); });
-            el.addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); if (marble.state === 'falling' && !marble.collected) speakChar(char); }, { passive: false });
+
+            el.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (marble.state === 'falling' && !marble.collected) speakChar(char);
+            });
+            el.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (marble.state === 'falling' && !marble.collected) speakChar(char);
+            }, { passive: false });
+
             marbleContainer.appendChild(el);
+
             const marble = {
-                char, isCorrect, state: 'falling', element: el, active: true,
-                baseSize: finalSize, startTime: performance.now(),
-                x: startPos.x, y: startPos.y, progress: 0, collected: false, spoken: false
+                char,
+                isCorrect,
+                state: 'falling',
+                element: el,
+                active: true,
+                baseSize: finalSize,
+                startTime: performance.now(),
+                x: startPos.x,
+                y: startPos.y,
+                progress: 0,
+                collected: false,
+                spoken: false,
+                lastProgress: 0,
+                lastTime: performance.now()
             };
             marbles.push(marble);
         }
@@ -1539,12 +1637,17 @@
         function animateMarbles() {
             if (animFrameId) cancelAnimationFrame(animFrameId);
             let lastTime = 0;
+
             function loop(timestamp) {
-                if (!isPlaying || isPaused || !isGameActive) { animFrameId = requestAnimationFrame(loop); return; }
+                if (!isPlaying || isPaused || !isGameActive) {
+                    animFrameId = requestAnimationFrame(loop);
+                    return;
+                }
                 let delta = (timestamp - lastTime) / 1000;
                 if (delta > 0.05) delta = 0.05;
                 lastTime = timestamp;
                 const now = performance.now();
+
                 for (const m of marbles) {
                     if (!m.active) continue;
                     const elapsed = (now - m.startTime) / 1000;
@@ -1555,7 +1658,9 @@
                         continue;
                     }
                     const pos = progressFn(elapsed);
-                    m.progress = pos.progress; m.x = pos.x; m.y = pos.y;
+                    m.progress = pos.progress;
+                    m.x = pos.x;
+                    m.y = pos.y;
                     m.element.style.left = pos.x + '%';
                     m.element.style.top = pos.y + '%';
                     const scale = 0.7 + (elapsed / TOTAL_DURATION) * 0.8;
@@ -1563,15 +1668,23 @@
                     m.element.style.width = size + 'px';
                     m.element.style.height = size + 'px';
                     m.element.style.opacity = '1';
+
                     const dx = pos.x - LOGIC_TARGET_POS.x;
                     const dy = pos.y - LOGIC_TARGET_POS.y;
                     const dist = Math.sqrt(dx * dx + dy * dy);
                     const inZone = (dist < DETECT_RADIUS && !m.collected && m.active);
+
                     if (inZone) {
                         m.element.classList.add('in-decision-zone');
-                        if (!m.spoken) { m.spoken = true; speakChar(m.char); }
-                    } else { m.element.classList.remove('in-decision-zone'); }
+                        if (!m.spoken) {
+                            m.spoken = true;
+                            speakChar(m.char);
+                        }
+                    } else {
+                        m.element.classList.remove('in-decision-zone');
+                    }
                 }
+
                 const allDone = marbles.every(m => !m.active);
                 if (allDone && pendingIndex >= shuffleOrder.length && !isLevelComplete && !gameEnded) {
                     gameEnded = true;
@@ -1587,12 +1700,16 @@
             if (!isPlaying || isLevelComplete || isPaused || !isGameActive) return;
             let candidates = marbles.filter(m => m.active && !m.collected);
             if (candidates.length === 0) return;
-            let target = null; let minDist = Infinity;
+            let target = null;
+            let minDist = Infinity;
             for (const m of candidates) {
                 const dx = m.x - LOGIC_TARGET_POS.x;
                 const dy = m.y - LOGIC_TARGET_POS.y;
                 const dist = Math.sqrt(dx * dx + dy * dy);
-                if (dist < DETECT_RADIUS && dist < minDist) { minDist = dist; target = m; }
+                if (dist < DETECT_RADIUS && dist < minDist) {
+                    minDist = dist;
+                    target = m;
+                }
             }
             if (!target) return;
             collectMarble(target);
@@ -1600,18 +1717,22 @@
 
         function collectMarble(m) {
             if (m.collected) return;
-            m.collected = true; m.active = false;
+            m.collected = true;
+            m.active = false;
             m.element.classList.remove('in-decision-zone');
             if (m.isCorrect) {
-                collectCount++; collectedChars.push(m.char);
+                collectCount++;
+                collectedChars.push(m.char);
                 collectDisplay.textContent = `${collectCount}／8`;
                 soundDing();
             } else {
-                errorCount++; errorChars.push(m.char);
+                errorCount++;
+                errorChars.push(m.char);
                 soundError();
             }
             const el = m.element;
-            el.style.transition = 'left 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), top 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), width 0.8s ease, height 0.8s ease, transform 0.8s ease';
+            el.style.transition =
+                'left 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), top 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), width 0.8s ease, height 0.8s ease, transform 0.8s ease';
             el.style.left = COLLECTION_POINT.x + '%';
             el.style.top = COLLECTION_POINT.y + '%';
             el.style.transform = 'scale(0) rotate(20deg)';
@@ -1625,12 +1746,14 @@
                 marbleContainer.appendChild(ripple);
                 setTimeout(() => { if (ripple.parentNode) ripple.parentNode.removeChild(ripple); }, 900);
             }, 300);
-            const onFinish = () => { el.removeEventListener('transitionend', onFinish); if (el.parentNode) el.parentNode.removeChild(el); };
+            const onFinish = () => {
+                el.removeEventListener('transitionend', onFinish);
+                if (el.parentNode) el.parentNode.removeChild(el);
+            };
             el.addEventListener('transitionend', onFinish);
             setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 3000);
         }
 
-        // ----- 显示完成界面，根据 status 决定按钮 -----
         function showCompleteUI(icon, msg, subMsg, errorList, status) {
             lcIcon.textContent = icon;
             lcMsg.textContent = msg;
@@ -1651,18 +1774,13 @@
             }
             lcErrorInfo.innerHTML = errorHtml;
 
-            // 清空按钮组
             lcBtnGroup.innerHTML = '';
-
-            // 始终显示重玩和返回
             const btnConfigs = [
                 { id: 'replay', img: 'replay_icon.png', action: () => { lcOverlay.classList.remove('show'); initLevel(); } },
                 { id: 'back', img: 'back_icon.png', action: () => { lcOverlay.classList.remove('show'); goToMenu(); } },
             ];
 
-            // 根据 status 决定是否添加第三个按钮
             if (status === 'next') {
-                // 有下一关：显示 next_level_icon
                 btnConfigs.push({
                     id: 'next',
                     img: 'next_level_icon.png',
@@ -1670,7 +1788,6 @@
                     action: () => { lcOverlay.classList.remove('show'); selectedLevel++; initLevel(); }
                 });
             } else if (status === 'retry') {
-                // 未通关需重试：显示 skip_icon
                 btnConfigs.push({
                     id: 'skip',
                     img: 'skip_icon.png',
@@ -1688,13 +1805,12 @@
                     }
                 });
             }
-            // status === 'complete' 时不添加第三个按钮
 
             btnConfigs.forEach(cfg => {
                 const btn = document.createElement('button');
                 btn.className = 'lc-icon-btn';
                 const img = document.createElement('img');
-                img.src = `asset/${cfg.img}`;  // ★ 修改為 asset/
+                img.src = `asset/${cfg.img}`;
                 img.alt = cfg.id;
                 img.onerror = function() {
                     this.style.display = 'none';
@@ -1714,7 +1830,9 @@
 
         function triggerLevelComplete() {
             if (isLevelComplete) return;
-            isLevelComplete = true; isPlaying = false; isGameActive = false;
+            isLevelComplete = true;
+            isPlaying = false;
+            isGameActive = false;
             if (marbleTimer) clearInterval(marbleTimer);
             if (animFrameId) cancelAnimationFrame(animFrameId);
             if (waterAnimId) cancelAnimationFrame(waterAnimId);
@@ -1729,13 +1847,15 @@
                 showCompleteUI('🎉', '太棒了！', `第 ${selectedLevel+1} 關完成，進入下一關！`, errorChars, 'next');
             } else {
                 showCompleteUI('🏆', '🎊 全部通關！', `你已完成所有 ${total} 關！總共誤選 ${errorCount} 次。`, errorChars, 'complete');
-                soundLevelUp(); setTimeout(soundLevelUp, 500);
+                soundLevelUp();
+                setTimeout(soundLevelUp, 500);
             }
         }
 
         function showRetryOrSkip() {
             if (isLevelComplete) return;
-            isPlaying = false; isGameActive = false;
+            isPlaying = false;
+            isGameActive = false;
             if (marbleTimer) clearInterval(marbleTimer);
             if (animFrameId) cancelAnimationFrame(animFrameId);
             if (waterAnimId) cancelAnimationFrame(waterAnimId);
@@ -1760,7 +1880,7 @@
                 btn.className = 'level-btn';
                 const img = document.createElement('img');
                 img.className = 'level-icon';
-                img.src = `asset/level${i+1}.png`;  // ★ 修改為 asset/
+                img.src = `asset/level${i+1}.png`;
                 img.alt = `第 ${i+1} 關`;
                 btn.appendChild(img);
                 if (i === selectedLevel) btn.classList.add('active');
@@ -1783,9 +1903,12 @@
             levelSelect.classList.add('hidden');
             game.classList.add('active');
             initAudio();
-            bgmSlider.value = bgmVolume; bgmLabel.textContent = Math.round(bgmVolume * 100) + '%';
-            sfxSlider.value = sfxVolume; sfxLabel.textContent = Math.round(sfxVolume * 100) + '%';
-            ttsSlider.value = ttsVolume; ttsLabel.textContent = Math.round(ttsVolume * 100) + '%';
+            bgmSlider.value = bgmVolume;
+            bgmLabel.textContent = Math.round(bgmVolume * 100) + '%';
+            sfxSlider.value = sfxVolume;
+            sfxLabel.textContent = Math.round(sfxVolume * 100) + '%';
+            ttsSlider.value = ttsVolume;
+            ttsLabel.textContent = Math.round(ttsVolume * 100) + '%';
             initLevel();
         }
 
@@ -1793,10 +1916,13 @@
             if (marbleTimer) clearInterval(marbleTimer);
             if (animFrameId) cancelAnimationFrame(animFrameId);
             if (waterAnimId) cancelAnimationFrame(waterAnimId);
-            isPlaying = false; isGameActive = false;
+            isPlaying = false;
+            isGameActive = false;
             game.classList.remove('active');
             lcOverlay.classList.remove('show');
-            marbleContainer.innerHTML = ''; waterContainer.innerHTML = ''; waterParticles = [];
+            marbleContainer.innerHTML = '';
+            waterContainer.innerHTML = '';
+            waterParticles = [];
             showLevelSelect(selectedMode);
         }
 
@@ -1808,90 +1934,128 @@
             if (marbleTimer) clearInterval(marbleTimer);
             if (animFrameId) cancelAnimationFrame(animFrameId);
             if (waterAnimId) cancelAnimationFrame(waterAnimId);
-            isPlaying = false; isGameActive = false;
-            marbleContainer.innerHTML = ''; waterContainer.innerHTML = ''; waterParticles = [];
+            isPlaying = false;
+            isGameActive = false;
+            marbleContainer.innerHTML = '';
+            waterContainer.innerHTML = '';
+            waterParticles = [];
             selectedLevel = 0;
-            if (!bgmInterval && !document.hidden) { startBGM(); }
+            if (!bgmInterval && !document.hidden) {
+                startBGM();
+            }
         }
 
-        // ★ 修正：將按鈕事件綁定改為更可靠的方式，並確保在 DOM 載入後執行
-        document.addEventListener('DOMContentLoaded', function() {
-            // 先移除可能重複的監聽器（避免衝突）
-            btnSound.removeEventListener('click', showLevelSelect);
-            btnRadical.removeEventListener('click', showLevelSelect);
-            btnStats.removeEventListener('click', renderStatsModal);
-            backToMenu.removeEventListener('click', goToMenu);
-            document.getElementById('btn-back').removeEventListener('click', goToLevelSelect);
+        // ================================================================
+        //  按鈕事件綁定（多種方式確保可靠）
+        // ================================================================
+        function bindButtonEvents() {
+            // 移除舊監聽器（避免重複）
+            const handlers = {
+                sound: null,
+                radical: null,
+                stats: null,
+                backMenu: null,
+                backGame: null
+            };
 
-            // 重新綁定
-            btnSound.addEventListener('click', function(e) {
+            // 定義新的處理函數
+            const soundHandler = function(e) {
                 e.preventDefault();
-                initAudio(); // 啟動音頻及 BGM
+                initAudio();
                 showLevelSelect('sound');
-            });
-            btnRadical.addEventListener('click', function(e) {
+                console.log('🔊 偏旁配對按鈕點擊');
+            };
+            const radicalHandler = function(e) {
                 e.preventDefault();
                 initAudio();
                 showLevelSelect('radical');
-            });
-            btnStats.addEventListener('click', function(e) {
+                console.log('📖 部首配對按鈕點擊');
+            };
+            const statsHandler = function(e) {
                 e.preventDefault();
                 initAudio();
                 renderStatsModal();
-            });
-            backToMenu.addEventListener('click', function(e) {
+                console.log('📊 記錄按鈕點擊');
+            };
+            const backMenuHandler = function(e) {
                 e.preventDefault();
                 goToMenu();
-            });
-            document.getElementById('btn-back').addEventListener('click', function(e) {
+            };
+            const backGameHandler = function(e) {
                 e.preventDefault();
                 goToLevelSelect();
-            });
-            console.log('✅ 所有按鈕事件已重新綁定 (DOMContentLoaded)');
-        });
+            };
 
-        // 其餘鍵盤、陀螺儀等事件保持原樣
+            // 綁定 (同時綁 click 和 touchstart 以提升移動端回應)
+            btnSound.addEventListener('click', soundHandler);
+            btnSound.addEventListener('touchstart', soundHandler, { passive: false });
+            btnRadical.addEventListener('click', radicalHandler);
+            btnRadical.addEventListener('touchstart', radicalHandler, { passive: false });
+            btnStats.addEventListener('click', statsHandler);
+            btnStats.addEventListener('touchstart', statsHandler, { passive: false });
+            backToMenu.addEventListener('click', backMenuHandler);
+            backToMenu.addEventListener('touchstart', backMenuHandler, { passive: false });
+            document.getElementById('btn-back').addEventListener('click', backGameHandler);
+            document.getElementById('btn-back').addEventListener('touchstart', backGameHandler, { passive: false });
+
+            console.log('✅ 所有按鈕事件綁定完成（含 touchstart）');
+        }
+
+        // 在 DOM 就緒和頁面完全載入後都執行綁定
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', bindButtonEvents);
+        } else {
+            bindButtonEvents();
+        }
+        window.addEventListener('load', bindButtonEvents); // 額外保障
+
+        // ---- 鍵盤與陀螺儀 ----
         document.addEventListener('keydown', (e) => {
             if (e.key === 'ArrowLeft' || e.key === 'Left') {
                 e.preventDefault();
                 if (game.classList.contains('active') && !lcOverlay.classList.contains('show')) triggerLeft();
             }
-            if (e.key === 'ArrowRight' || e.key === 'Right') e.preventDefault();
         });
 
         let leftTriggered = false;
+
         function handleOrientation(e) {
             if (!game.classList.contains('active') || !e.gamma) return;
-            if (e.gamma < -12 && !leftTriggered) { leftTriggered = true; triggerLeft(); setTimeout(() => leftTriggered = false, 300); }
+            if (e.gamma < -12 && !leftTriggered) {
+                leftTriggered = true;
+                triggerLeft();
+                setTimeout(() => leftTriggered = false, 300);
+            }
             if (e.gamma > -5) leftTriggered = false;
         }
+
         if (window.DeviceOrientationEvent) {
             if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-                DeviceOrientationEvent.requestPermission().then(s => { if (s === 'granted') window.addEventListener('deviceorientation', handleOrientation); }).catch(() => {});
-            } else { window.addEventListener('deviceorientation', handleOrientation); }
+                DeviceOrientationEvent.requestPermission().then(s => {
+                    if (s === 'granted') window.addEventListener('deviceorientation', handleOrientation);
+                }).catch(() => {});
+            } else {
+                window.addEventListener('deviceorientation', handleOrientation);
+            }
         }
 
+        // ---- 防止觸控滾動 ----
         document.addEventListener('touchmove', (e) => { if (e.target.closest('#app')) e.preventDefault(); }, { passive: false });
         document.addEventListener('visibilitychange', () => { isPaused = document.hidden; });
-        document.addEventListener('click', () => { initAudio(); }, { once: true });
-        document.addEventListener('touchstart', () => { initAudio(); }, { once: true });
+
+        // ---- 語音預載 ----
         window.speechSynthesis.getVoices();
 
-        document.getElementById('river').addEventListener('click', function(e) {
-            const rect = this.getBoundingClientRect();
-            const x = ((e.clientX - rect.left) / rect.width) * 100;
-            const y = ((e.clientY - rect.top) / rect.height) * 100;
-            console.log(`🖱️ 點擊位置: ${x.toFixed(2)}%, ${y.toFixed(2)}%`);
-        });
-
+        // ---- 初始化 ----
         buildProgressFn();
         menu.classList.remove('hidden');
         levelSelect.classList.add('hidden');
         game.classList.remove('active');
         selectedMode = 'sound';
         selectedLevel = 0;
-        console.log('🌊 青流字旅 · 文字漂流記 已啟動 (修正版，路徑已改為 asset/ 和 marble/)');
-        console.log('💡 點擊任何按鈕即可啟動 BGM 並進入遊戲');
+        console.log('🌊 青流字旅 · 文字漂流記 已啟動 (最終修正版)');
+        console.log('📁 圖片路徑：asset/ 和 marble/');
+        console.log('💡 點擊按鈕即可啟動 BGM 並切換畫面');
     </script>
 </body>
 </html>
