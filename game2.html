@@ -37,6 +37,35 @@
             position: relative;
         }
 
+        /* ===== 横屏提示遮罩 ===== */
+        #rotate-mask {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.9);
+            color: #fff;
+            font-size: 1.5rem;
+            text-align: center;
+            flex-direction: column;
+            padding: 30px;
+        }
+        #rotate-mask .icon {
+            font-size: 5rem;
+            margin-bottom: 20px;
+        }
+        #rotate-mask .hint {
+            max-width: 400px;
+        }
+        @media (orientation: portrait) and (max-width: 768px) {
+            #rotate-mask {
+                display: flex !important;
+            }
+        }
+        /* PC 宽屏也可能需要提示，但暂不强制，仅移动端 */
+
         /* ===== 共用畫面 ===== */
         .screen {
             position: absolute;
@@ -471,8 +500,6 @@
         #sign-sub {
             display: none;
         }
-
-        /* ★ 圈圈固定大小 */
         #decision-indicator {
             position: absolute;
             left: 73.00%;
@@ -508,7 +535,6 @@
             50% { transform: translate(-50%, -50%) scale(1.2); opacity: 1; }
             100% { transform: translate(-50%, -50%) scale(0.9); opacity: 0.7; }
         }
-
         .marble {
             position: absolute;
             background-size: contain;
@@ -701,6 +727,7 @@
         }
 
         #load-status, #debug-info { display: none; }
+        /* 横屏提示遮罩已定义在上方 */
         #orientation-tip {
             position: absolute;
             inset: 0;
@@ -716,13 +743,14 @@
             text-align: center;
         }
         #orientation-tip.show { display: flex; }
-        @media (min-width: 769px) { #orientation-tip { display: none !important; } }
+        @media (min-width: 769px) {
+            #orientation-tip { display: none !important; }
+        }
 
         /* 手機端調整 */
         @media (max-width: 500px) {
             #header { height: 44px; padding: 0 10px; font-size: 0.7rem; }
             #btn-back { font-size: 0.7rem; padding: 3px 10px; }
-            /* 圈圈在手機上稍微縮小，但保持固定大小 */
             #decision-indicator { width: 60px; height: 60px; }
             #decision-indicator::after { font-size: 0.6rem; top: -24px; padding: 0 8px; }
             .level-grid .level-btn { width: 95px; }
@@ -742,6 +770,10 @@
             .back-icon-btn { max-width: 140px; }
             .lc-btn-group .lc-icon-btn { width: 150px; }
             .lc-btn-group { gap: 16px; }
+        }
+
+        @media (min-width: 768px) {
+            /* PC 上保持较大尺寸 */
         }
 
         .water-particle {
@@ -877,6 +909,12 @@
     </style>
 </head>
 <body>
+    <!-- 横屏遮罩 -->
+    <div id="rotate-mask">
+        <div class="icon">↻</div>
+        <div class="hint">請將手機旋轉至 <strong>橫向</strong> 模式遊玩<br><small>（Landscape）</small></div>
+    </div>
+
     <div id="app">
         <!-- ===== 選單畫面 ===== -->
         <div id="menu" class="screen">
@@ -1587,10 +1625,11 @@
                 }, 800);
             }
 
-            // ★ 固定尺寸：原始大小 200px
-            const FIXED_SIZE = 200;
-            el.style.width = FIXED_SIZE + 'px';
-            el.style.height = FIXED_SIZE + 'px';
+            // 基礎尺寸（原始 PC 版本約 200px，此處取決於視口但保留最大值 200）
+            const baseSize = Math.min(window.innerWidth * 0.22, window.innerHeight * 0.22, 200);
+            const finalSize = Math.max(baseSize, 80);
+            el.style.width = finalSize + 'px';
+            el.style.height = finalSize + 'px';
 
             const startPos = PATH_PERCENT[0];
             el.style.left = startPos.x + '%';
@@ -1616,7 +1655,7 @@
                 state: 'falling',
                 element: el,
                 active: true,
-                baseSize: FIXED_SIZE,
+                baseSize: finalSize,
                 startTime: performance.now(),
                 x: startPos.x,
                 y: startPos.y,
@@ -1658,16 +1697,20 @@
                     m.y = pos.y;
                     m.element.style.left = pos.x + '%';
                     m.element.style.top = pos.y + '%';
-                    // 保持固定大小，但可以輕微縮放以增加動感（可選）
-                    const scale = 0.85 + (elapsed / TOTAL_DURATION) * 0.3; // 0.85 ~ 1.15
-                    const size = m.baseSize * scale;
+
+                    // ★ 根據與目標點的距離動態調整大小（越近越大）
+                    const dx = pos.x - LOGIC_TARGET_POS.x;
+                    const dy = pos.y - LOGIC_TARGET_POS.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    // 距離最大約 30% 左右，將距離映射到縮放因子 (0.7 ~ 1.3)
+                    const maxDist = 30; // 經驗值
+                    const clampedDist = Math.min(dist, maxDist);
+                    const scaleFactor = 0.7 + (1 - clampedDist / maxDist) * 0.6; // 0.7 ~ 1.3
+                    const size = m.baseSize * scaleFactor;
                     m.element.style.width = size + 'px';
                     m.element.style.height = size + 'px';
                     m.element.style.opacity = '1';
 
-                    const dx = pos.x - LOGIC_TARGET_POS.x;
-                    const dy = pos.y - LOGIC_TARGET_POS.y;
-                    const dist = Math.sqrt(dx * dx + dy * dy);
                     const inZone = (dist < DETECT_RADIUS && !m.collected && m.active);
 
                     if (inZone) {
@@ -2039,9 +2082,9 @@
         game.classList.remove('active');
         selectedMode = 'sound';
         selectedLevel = 0;
-        console.log('🌊 青流字旅 · 文字漂流記 已啟動 (固定尺寸回歸)');
+        console.log('🌊 青流字旅 · 文字漂流記 已啟動 (動態尺寸 + 強制橫屏)');
         console.log('📁 圖片路徑：asset/ 和 marble/');
-        console.log('💡 彈珠大小固定為 200px，圈圈固定大小，所有位置基於百分比');
+        console.log('💡 彈珠大小會根據距離目標點動態變化 (靠近變大)');
     </script>
 </body>
 </html>
