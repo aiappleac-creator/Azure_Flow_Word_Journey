@@ -119,7 +119,6 @@
             line-height: 0;
             width: 100%;
             text-align: center;
-            pointer-events: auto; /* 確保可點擊 */
         }
         .icon-btn:hover {
             transform: scale(1.04);
@@ -137,7 +136,7 @@
 
         /* ===== 選單背景 ===== */
         #menu {
-            background-image: url('marble_family/asset/background_board.png');
+            background-image: url('asset/background_board.png');
             background-size: cover;
             background-position: center;
             z-index: 100;
@@ -204,7 +203,7 @@
 
         /* ===== 關卡選擇畫面 ===== */
         #level-select {
-            background-image: url('marble_family/asset/background_board.png');
+            background-image: url('asset/background_board.png');
             background-size: cover;
             background-position: center;
             z-index: 90;
@@ -438,7 +437,7 @@
         #river-bg {
             position: absolute;
             inset: 0;
-            background-image: url('marble_family/asset/background_board.png');
+            background-image: url('asset/background_board.png');
             background-size: cover;
             background-position: center;
             z-index: 0;
@@ -893,13 +892,13 @@
 
             <div class="btn-group">
                 <button class="icon-btn" id="btn-sound-mode">
-                    <img src="marble_family/asset/sound_icon.png" alt="偏旁配對" />
+                    <img src="asset/sound_icon.png" alt="偏旁配對" />
                 </button>
                 <button class="icon-btn" id="btn-radical-mode">
-                    <img src="marble_family/asset/radical_icon.png" alt="部首配對" />
+                    <img src="asset/radical_icon.png" alt="部首配對" />
                 </button>
                 <button class="icon-btn" id="btn-stats">
-                    <img src="marble_family/asset/record_icon.png" alt="查看記錄" />
+                    <img src="asset/record_icon.png" alt="查看記錄" />
                 </button>
             </div>
 
@@ -937,7 +936,7 @@
             <div class="level-grid" id="level-grid"></div>
             <!-- 返回按钮改为图片 -->
             <button class="back-icon-btn" id="back-to-menu">
-                <img src="marble_family/asset/back_icon.png" alt="返回選單" />
+                <img src="asset/back_icon.png" alt="返回選單" />
             </button>
             <div class="footer" style="margin-top:4px;font-size:0.75rem;color:#b3e4ff;">點選關卡圖片開始遊戲</div>
         </div>
@@ -1487,7 +1486,7 @@
             pendingIndex++;
             const el = document.createElement('div');
             el.className = 'marble';
-            const imgPath = `marble_family/marble/${char}.png`;
+            const imgPath = `marble/${char}.png`;  // ★ 修改為 marble/
             el.style.backgroundImage = `url(${imgPath})`;
             const imgTest = new Image();
             let fallbackUsed = false;
@@ -1695,7 +1694,7 @@
                 const btn = document.createElement('button');
                 btn.className = 'lc-icon-btn';
                 const img = document.createElement('img');
-                img.src = `marble_family/asset/${cfg.img}`;
+                img.src = `asset/${cfg.img}`;  // ★ 修改為 asset/
                 img.alt = cfg.id;
                 img.onerror = function() {
                     this.style.display = 'none';
@@ -1761,7 +1760,7 @@
                 btn.className = 'level-btn';
                 const img = document.createElement('img');
                 img.className = 'level-icon';
-                img.src = `marble_family/asset/level${i+1}.png`;
+                img.src = `asset/level${i+1}.png`;  // ★ 修改為 asset/
                 img.alt = `第 ${i+1} 關`;
                 btn.appendChild(img);
                 if (i === selectedLevel) btn.classList.add('active');
@@ -1891,8 +1890,7 @@
         game.classList.remove('active');
         selectedMode = 'sound';
         selectedLevel = 0;
-        // 注意：startBGM 會在 initAudio 中被呼叫，但剛開始可能沒有用戶互動，所以暫不強制啟動
-        console.log('🌊 青流字旅 · 文字漂流記 已啟動 (修正版)');
+        console.log('🌊 青流字旅 · 文字漂流記 已啟動 (修正版，路徑已改為 asset/ 和 marble/)');
         console.log('💡 點擊任何按鈕即可啟動 BGM 並進入遊戲');
     </script>
 </body>
