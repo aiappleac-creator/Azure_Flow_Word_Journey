@@ -4,6 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>青流字旅 · 文字漂流記</title>
+    <!-- 自動適應 GitHub Pages 專案路徑 -->
+    <base href="/Azure_Flow_Word_Journey/">
     <style>
         /* ===== 全域重置 ===== */
         * {
@@ -136,7 +138,7 @@
 
         /* ===== 選單背景 ===== */
         #menu {
-            background-image: url('marble_family/asset/background_board.png');
+            background-image: url('asset/background_board.png');
             background-size: cover;
             background-position: center;
             z-index: 100;
@@ -203,7 +205,7 @@
 
         /* ===== 關卡選擇畫面 ===== */
         #level-select {
-            background-image: url('marble_family/asset/background_board.png');
+            background-image: url('asset/background_board.png');
             background-size: cover;
             background-position: center;
             z-index: 90;
@@ -437,7 +439,7 @@
         #river-bg {
             position: absolute;
             inset: 0;
-            background-image: url('marble_family/asset/background_board.png');
+            background-image: url('asset/background_board.png');
             background-size: cover;
             background-position: center;
             z-index: 0;
@@ -611,7 +613,7 @@
             font-size: 0.7rem;
         }
 
-        /* ===== 關卡完成介面（图片按钮，220px） ===== */
+        /* ===== 關卡完成介面 ===== */
         #level-complete {
             position: absolute;
             inset: 0;
@@ -892,13 +894,13 @@
 
             <div class="btn-group">
                 <button class="icon-btn" id="btn-sound-mode">
-                    <img src="marble_family/asset/sound_icon.png" alt="偏旁配對" />
+                    <img src="asset/sound_icon.png" alt="偏旁配對" />
                 </button>
                 <button class="icon-btn" id="btn-radical-mode">
-                    <img src="marble_family/asset/radical_icon.png" alt="部首配對" />
+                    <img src="asset/radical_icon.png" alt="部首配對" />
                 </button>
                 <button class="icon-btn" id="btn-stats">
-                    <img src="marble_family/asset/record_icon.png" alt="查看記錄" />
+                    <img src="asset/record_icon.png" alt="查看記錄" />
                 </button>
             </div>
 
@@ -936,7 +938,7 @@
             <div class="level-grid" id="level-grid"></div>
             <!-- 返回按钮改为图片 -->
             <button class="back-icon-btn" id="back-to-menu">
-                <img src="marble_family/asset/back_icon.png" alt="返回選單" />
+                <img src="asset/back_icon.png" alt="返回選單" />
             </button>
             <div class="footer" style="margin-top:4px;font-size:0.75rem;color:#b3e4ff;">點選關卡圖片開始遊戲</div>
         </div>
@@ -996,7 +998,7 @@
 
     <script>
         // ================================================================
-        //  📦 字庫資料（保持不變）
+        //  📦 字庫資料
         // ================================================================
         const soundModeData = [
             { target: "青", correct: ["清", "晴", "請", "情", "蜻", "精", "睛", "靖"], distractors: ["抱", "鈴", "放", "很", "河", "拍", "嗎"] },
@@ -1157,7 +1159,7 @@
         function soundDing() { playTone(880, 0.15); setTimeout(() => playTone(1100, 0.1), 70); }
         function soundError() { playTone(200, 0.15, 'sawtooth', 0.2); setTimeout(() => playTone(150, 0.15, 'sawtooth', 0.18), 120); }
         function soundWater() { playTone(180, 0.3, 'sine', 0.06); setTimeout(() => playTone(140, 0.35, 'sine', 0.05), 120); }
-        function soundLevelUp() { [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => playTone(f, 0.12, 'sine', 0.15), i * 90)); }
+        function soundLevelUp() { [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => playTone(f, 0.12, 'sine', 0.15), i * 90); }
 
         function startBGM() {
             if (bgmInterval) return;
@@ -1363,7 +1365,6 @@
                 }
                 html += `</div>`;
             }
-            // 清除记录按钮
             html += `<button class="clear-btn" id="clear-records-btn">🗑️ 清除所有記錄</button>`;
             html += `<button class="close-btn" id="close-stats-modal">關閉</button>`;
             statsModalContent.innerHTML = html;
@@ -1483,11 +1484,14 @@
             pendingIndex++;
             const el = document.createElement('div');
             el.className = 'marble';
-            const imgPath = `marble_family/marble/${char}.png`;
-            el.style.backgroundImage = `url(${imgPath})`;
+            const imgPath = `marble/${char}.png`;
+            el.style.backgroundImage = `url(${imgPath}?v=1)`;
+
             const imgTest = new Image();
             let fallbackUsed = false;
-            imgTest.onload = function() { if (!fallbackUsed) { console.log(`✅ 載入彈珠圖片: ${char}`); } };
+            imgTest.onload = function() {
+                if (!fallbackUsed) { console.log(`✅ 載入彈珠圖片: ${char}`); }
+            };
             imgTest.onerror = function() {
                 if (!fallbackUsed) {
                     fallbackUsed = true;
@@ -1496,10 +1500,13 @@
                     span.className = 'fallback-char';
                     span.textContent = char;
                     el.appendChild(span);
+                    console.warn(`⚠️ 圖片載入失敗: ${char}，使用備用樣式`);
                 }
             };
-            imgTest.src = imgPath;
-            if (imgTest.complete && imgTest.naturalWidth > 0) { } else {
+            imgTest.src = imgPath + '?v=1';
+            if (imgTest.complete && imgTest.naturalWidth > 0) {
+                // ok
+            } else {
                 setTimeout(() => {
                     if (imgTest.naturalWidth === 0 || imgTest.naturalHeight === 0) {
                         if (!fallbackUsed) {
@@ -1509,10 +1516,12 @@
                             span.className = 'fallback-char';
                             span.textContent = char;
                             el.appendChild(span);
+                            console.warn(`⚠️ 圖片載入逾時: ${char}，使用備用樣式`);
                         }
                     }
                 }, 800);
             }
+
             const baseSize = Math.min(window.innerWidth * 0.22, window.innerHeight * 0.22, 200);
             const finalSize = Math.max(baseSize, 80);
             el.style.width = finalSize + 'px';
@@ -1525,6 +1534,7 @@
             el.addEventListener('click', (e) => { e.stopPropagation(); if (marble.state === 'falling' && !marble.collected) speakChar(char); });
             el.addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); if (marble.state === 'falling' && !marble.collected) speakChar(char); }, { passive: false });
             marbleContainer.appendChild(el);
+
             const marble = {
                 char, isCorrect, state: 'falling', element: el, active: true,
                 baseSize: finalSize, startTime: performance.now(),
@@ -1567,7 +1577,9 @@
                     if (inZone) {
                         m.element.classList.add('in-decision-zone');
                         if (!m.spoken) { m.spoken = true; speakChar(m.char); }
-                    } else { m.element.classList.remove('in-decision-zone'); }
+                    } else {
+                        m.element.classList.remove('in-decision-zone');
+                    }
                 }
                 const allDone = marbles.every(m => !m.active);
                 if (allDone && pendingIndex >= shuffleOrder.length && !isLevelComplete && !gameEnded) {
@@ -1627,7 +1639,7 @@
             setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 3000);
         }
 
-        // ----- 显示完成界面，根据 status 决定按钮 -----
+        // ----- 显示完成界面 -----
         function showCompleteUI(icon, msg, subMsg, errorList, status) {
             lcIcon.textContent = icon;
             lcMsg.textContent = msg;
@@ -1648,18 +1660,13 @@
             }
             lcErrorInfo.innerHTML = errorHtml;
 
-            // 清空按钮组
             lcBtnGroup.innerHTML = '';
-
-            // 始终显示重玩和返回
             const btnConfigs = [
                 { id: 'replay', img: 'replay_icon.png', action: () => { lcOverlay.classList.remove('show'); initLevel(); } },
                 { id: 'back', img: 'back_icon.png', action: () => { lcOverlay.classList.remove('show'); goToMenu(); } },
             ];
 
-            // 根据 status 决定是否添加第三个按钮
             if (status === 'next') {
-                // 有下一关：显示 next_level_icon
                 btnConfigs.push({
                     id: 'next',
                     img: 'next_level_icon.png',
@@ -1667,7 +1674,6 @@
                     action: () => { lcOverlay.classList.remove('show'); selectedLevel++; initLevel(); }
                 });
             } else if (status === 'retry') {
-                // 未通关需重试：显示 skip_icon
                 btnConfigs.push({
                     id: 'skip',
                     img: 'skip_icon.png',
@@ -1685,13 +1691,13 @@
                     }
                 });
             }
-            // status === 'complete' 时不添加第三个按钮
+            // status === 'complete' 不添加第三个按钮
 
             btnConfigs.forEach(cfg => {
                 const btn = document.createElement('button');
                 btn.className = 'lc-icon-btn';
                 const img = document.createElement('img');
-                img.src = `marble_family/asset/${cfg.img}`;
+                img.src = `asset/${cfg.img}?v=1`;
                 img.alt = cfg.id;
                 img.onerror = function() {
                     this.style.display = 'none';
@@ -1757,7 +1763,7 @@
                 btn.className = 'level-btn';
                 const img = document.createElement('img');
                 img.className = 'level-icon';
-                img.src = `marble_family/asset/level${i+1}.png`;
+                img.src = `asset/level${i+1}.png?v=1`;
                 img.alt = `第 ${i+1} 關`;
                 btn.appendChild(img);
                 if (i === selectedLevel) btn.classList.add('active');
@@ -1832,8 +1838,12 @@
         }
         if (window.DeviceOrientationEvent) {
             if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-                DeviceOrientationEvent.requestPermission().then(s => { if (s === 'granted') window.addEventListener('deviceorientation', handleOrientation); }).catch(() => {});
-            } else { window.addEventListener('deviceorientation', handleOrientation); }
+                DeviceOrientationEvent.requestPermission().then(s => {
+                    if (s === 'granted') window.addEventListener('deviceorientation', handleOrientation);
+                }).catch(() => {});
+            } else {
+                window.addEventListener('deviceorientation', handleOrientation);
+            }
         }
 
         document.addEventListener('touchmove', (e) => { if (e.target.closest('#app')) e.preventDefault(); }, { passive: false });
@@ -1856,7 +1866,8 @@
         selectedMode = 'sound';
         selectedLevel = 0;
         startBGM();
-        console.log('🌊 青流字旅 · 文字漂流記 已啟動 (完成按鈕邏輯修正)');
+
+        console.log('🌊 青流字旅 · 文字漂流記 已啟動 (路徑已調整為 asset/ 和 marble/)');
     </script>
 </body>
 </html>
