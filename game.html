@@ -1131,12 +1131,13 @@
             sfxVolume = 1.0,
             ttsVolume = 1.0;
 
-        // ---- 音頻系統 ----
+        // ---- 音頻系統（修正循環呼叫） ----
         let audioCtx = null,
             masterGain = null,
             bgmInterval = null,
             bgmEnabled = false;
 
+        // 僅負責創建 AudioContext，不啟動 BGM
         function initAudio() {
             if (!audioCtx) {
                 audioCtx = new(window.AudioContext || window.webkitAudioContext)();
@@ -1147,8 +1148,52 @@
             if (audioCtx.state === 'suspended') {
                 audioCtx.resume();
             }
-            // 關鍵：每次呼叫都嘗試啟動 BGM（僅當尚未啟動時）
-            if (!bgmInterval) startBGM();
+        }
+
+        // 獨立啟動 BGM（會先確保 audioCtx 存在）
+        function startBGM() {
+            if (bgmInterval) return; // 已啟動則略過
+            initAudio(); // 確保上下文存在
+            if (!audioCtx) return;
+            bgmEnabled = true;
+            const notes = [261.63, 329.63, 392.00, 523.25];
+            let noteIndex = 0;
+            bgmInterval = setInterval(() => {
+                if (!masterGain || !bgmEnabled) return;
+                const freq = notes[noteIndex % notes.length];
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.value = freq;
+                const vol = 0.18 * bgmVolume;
+                gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+                osc.connect(gain);
+                gain.connect(masterGain);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.3);
+                noteIndex++;
+                if (noteIndex % 2 === 0) {
+                    const osc2 = audioCtx.createOscillator();
+                    const gain2 = audioCtx.createGain();
+                    osc2.type = 'sine';
+                    osc2.frequency.value = 65.41;
+                    const vol2 = 0.12 * bgmVolume;
+                    gain2.gain.setValueAtTime(vol2, audioCtx.currentTime);
+                    gain2.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
+                    osc2.connect(gain2);
+                    gain2.connect(masterGain);
+                    osc2.start();
+                    osc2.stop(audioCtx.currentTime + 0.5);
+                }
+            }, 700);
+            console.log('🎵 BGM 已啟動');
+        }
+
+        function stopBGM() {
+            bgmEnabled = false;
+            if (bgmInterval) { clearInterval(bgmInterval);
+                bgmInterval = null; }
         }
 
         bgmSlider.addEventListener('input', () => {
@@ -1194,51 +1239,6 @@
 
         function soundLevelUp() {
             [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => playTone(f, 0.12, 'sine', 0.15), i * 90));
-        }
-
-        function startBGM() {
-            if (bgmInterval) return;
-            initAudio();
-            if (!audioCtx) return;
-            bgmEnabled = true;
-            const notes = [261.63, 329.63, 392.00, 523.25];
-            let noteIndex = 0;
-            bgmInterval = setInterval(() => {
-                if (!masterGain || !bgmEnabled) return;
-                const freq = notes[noteIndex % notes.length];
-                const osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
-                osc.type = 'sine';
-                osc.frequency.value = freq;
-                const vol = 0.18 * bgmVolume;
-                gain.gain.setValueAtTime(vol, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
-                osc.connect(gain);
-                gain.connect(masterGain);
-                osc.start();
-                osc.stop(audioCtx.currentTime + 0.3);
-                noteIndex++;
-                if (noteIndex % 2 === 0) {
-                    const osc2 = audioCtx.createOscillator();
-                    const gain2 = audioCtx.createGain();
-                    osc2.type = 'sine';
-                    osc2.frequency.value = 65.41;
-                    const vol2 = 0.12 * bgmVolume;
-                    gain2.gain.setValueAtTime(vol2, audioCtx.currentTime);
-                    gain2.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
-                    osc2.connect(gain2);
-                    gain2.connect(masterGain);
-                    osc2.start();
-                    osc2.stop(audioCtx.currentTime + 0.5);
-                }
-            }, 700);
-            console.log('🎵 BGM 已啟動');
-        }
-
-        function stopBGM() {
-            bgmEnabled = false;
-            if (bgmInterval) { clearInterval(bgmInterval);
-                bgmInterval = null; }
         }
 
         document.addEventListener('visibilitychange', () => {
@@ -1903,6 +1903,8 @@
             levelSelect.classList.add('hidden');
             game.classList.add('active');
             initAudio();
+            // 啟動 BGM（如果尚未啟動）
+            if (!bgmInterval) startBGM();
             bgmSlider.value = bgmVolume;
             bgmLabel.textContent = Math.round(bgmVolume * 100) + '%';
             sfxSlider.value = sfxVolume;
@@ -1946,34 +1948,28 @@
         }
 
         // ================================================================
-        //  按鈕事件綁定（多種方式確保可靠）
+        //  按鈕事件綁定
         // ================================================================
         function bindButtonEvents() {
-            // 移除舊監聽器（避免重複）
-            const handlers = {
-                sound: null,
-                radical: null,
-                stats: null,
-                backMenu: null,
-                backGame: null
-            };
-
-            // 定義新的處理函數
+            // 定義處理函數（使用命名函數方便移除，但為了簡單，直接綁定）
             const soundHandler = function(e) {
                 e.preventDefault();
                 initAudio();
+                if (!bgmInterval) startBGM();
                 showLevelSelect('sound');
                 console.log('🔊 偏旁配對按鈕點擊');
             };
             const radicalHandler = function(e) {
                 e.preventDefault();
                 initAudio();
+                if (!bgmInterval) startBGM();
                 showLevelSelect('radical');
                 console.log('📖 部首配對按鈕點擊');
             };
             const statsHandler = function(e) {
                 e.preventDefault();
                 initAudio();
+                if (!bgmInterval) startBGM();
                 renderStatsModal();
                 console.log('📊 記錄按鈕點擊');
             };
@@ -1986,7 +1982,7 @@
                 goToLevelSelect();
             };
 
-            // 綁定 (同時綁 click 和 touchstart 以提升移動端回應)
+            // 綁定 (click + touchstart)
             btnSound.addEventListener('click', soundHandler);
             btnSound.addEventListener('touchstart', soundHandler, { passive: false });
             btnRadical.addEventListener('click', radicalHandler);
@@ -1998,16 +1994,16 @@
             document.getElementById('btn-back').addEventListener('click', backGameHandler);
             document.getElementById('btn-back').addEventListener('touchstart', backGameHandler, { passive: false });
 
-            console.log('✅ 所有按鈕事件綁定完成（含 touchstart）');
+            console.log('✅ 所有按鈕事件綁定完成');
         }
 
-        // 在 DOM 就緒和頁面完全載入後都執行綁定
+        // 執行綁定
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', bindButtonEvents);
         } else {
             bindButtonEvents();
         }
-        window.addEventListener('load', bindButtonEvents); // 額外保障
+        window.addEventListener('load', bindButtonEvents);
 
         // ---- 鍵盤與陀螺儀 ----
         document.addEventListener('keydown', (e) => {
@@ -2053,9 +2049,9 @@
         game.classList.remove('active');
         selectedMode = 'sound';
         selectedLevel = 0;
-        console.log('🌊 青流字旅 · 文字漂流記 已啟動 (最終修正版)');
+        console.log('🌊 青流字旅 · 文字漂流記 已啟動 (堆疊錯誤已修正)');
         console.log('📁 圖片路徑：asset/ 和 marble/');
-        console.log('💡 點擊按鈕即可啟動 BGM 並切換畫面');
+        console.log('💡 點擊按鈕即可啟動 BGM 並進入遊戲');
     </script>
 </body>
 </html>
