@@ -37,7 +37,7 @@
             position: relative;
         }
 
-        /* ===== 横屏提示遮罩 ===== */
+        /* ===== 横屏遮罩 ===== */
         #rotate-mask {
             position: fixed;
             inset: 0;
@@ -64,7 +64,6 @@
                 display: flex !important;
             }
         }
-        /* PC 宽屏也可能需要提示，但暂不强制，仅移动端 */
 
         /* ===== 共用畫面 ===== */
         .screen {
@@ -727,7 +726,6 @@
         }
 
         #load-status, #debug-info { display: none; }
-        /* 横屏提示遮罩已定义在上方 */
         #orientation-tip {
             position: absolute;
             inset: 0;
@@ -773,7 +771,7 @@
         }
 
         @media (min-width: 768px) {
-            /* PC 上保持较大尺寸 */
+            /* PC 尺寸保留 */
         }
 
         .water-particle {
@@ -1625,11 +1623,10 @@
                 }, 800);
             }
 
-            // 基礎尺寸（原始 PC 版本約 200px，此處取決於視口但保留最大值 200）
-            const baseSize = Math.min(window.innerWidth * 0.22, window.innerHeight * 0.22, 200);
-            const finalSize = Math.max(baseSize, 80);
-            el.style.width = finalSize + 'px';
-            el.style.height = finalSize + 'px';
+            // ★ 固定基礎尺寸為 200px（原始 PC 大小）
+            const BASE_SIZE = 200;
+            el.style.width = BASE_SIZE + 'px';
+            el.style.height = BASE_SIZE + 'px';
 
             const startPos = PATH_PERCENT[0];
             el.style.left = startPos.x + '%';
@@ -1655,7 +1652,7 @@
                 state: 'falling',
                 element: el,
                 active: true,
-                baseSize: finalSize,
+                baseSize: BASE_SIZE,
                 startTime: performance.now(),
                 x: startPos.x,
                 y: startPos.y,
@@ -1698,19 +1695,17 @@
                     m.element.style.left = pos.x + '%';
                     m.element.style.top = pos.y + '%';
 
-                    // ★ 根據與目標點的距離動態調整大小（越近越大）
-                    const dx = pos.x - LOGIC_TARGET_POS.x;
-                    const dy = pos.y - LOGIC_TARGET_POS.y;
-                    const dist = Math.sqrt(dx * dx + dy * dy);
-                    // 距離最大約 30% 左右，將距離映射到縮放因子 (0.7 ~ 1.3)
-                    const maxDist = 30; // 經驗值
-                    const clampedDist = Math.min(dist, maxDist);
-                    const scaleFactor = 0.7 + (1 - clampedDist / maxDist) * 0.6; // 0.7 ~ 1.3
-                    const size = m.baseSize * scaleFactor;
+                    // ★ 原始版本：根據進度逐漸變大 (0.7 ~ 1.5 倍)
+                    const progress = elapsed / TOTAL_DURATION;
+                    const scale = 0.7 + progress * 0.8; // 0.7 → 1.5
+                    const size = m.baseSize * scale;
                     m.element.style.width = size + 'px';
                     m.element.style.height = size + 'px';
                     m.element.style.opacity = '1';
 
+                    const dx = pos.x - LOGIC_TARGET_POS.x;
+                    const dy = pos.y - LOGIC_TARGET_POS.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
                     const inZone = (dist < DETECT_RADIUS && !m.collected && m.active);
 
                     if (inZone) {
@@ -2082,9 +2077,9 @@
         game.classList.remove('active');
         selectedMode = 'sound';
         selectedLevel = 0;
-        console.log('🌊 青流字旅 · 文字漂流記 已啟動 (動態尺寸 + 強制橫屏)');
+        console.log('🌊 青流字旅 · 文字漂流記 已啟動 (還原原始彈珠尺寸變化)');
         console.log('📁 圖片路徑：asset/ 和 marble/');
-        console.log('💡 彈珠大小會根據距離目標點動態變化 (靠近變大)');
+        console.log('💡 彈珠大小隨路徑進度從 0.7 倍放大至 1.5 倍');
     </script>
 </body>
 </html>
