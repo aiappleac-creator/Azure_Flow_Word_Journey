@@ -37,7 +37,7 @@
             position: relative;
         }
 
-        /* ★★★ 手機端整體縮放 & 關卡按鈕一行顯示 ★★★ */
+        /* ★★★ 手機端整體縮放 & 關卡按鈕固定寬度 ★★★ */
         @media (max-width: 768px) {
             body {
                 background: #000 !important;
@@ -74,20 +74,20 @@
                 width: 36px;
             }
 
-            /* ★★★ 關卡按鈕強制一行顯示 ★★★ */
+            /* ★★★ 關卡按鈕強制一行，固定寬度與PC一致 ★★★ */
             .level-grid {
                 display: flex !important;
                 flex-wrap: nowrap !important;
-                gap: 4px !important;
+                gap: 6px !important;
                 justify-content: center !important;
                 max-width: 100% !important;
                 padding: 0 4px;
             }
             .level-grid .level-btn {
-                flex: 1 1 0 !important;
+                flex: 0 0 auto !important;   /* 不拉伸 */
+                width: 130px !important;      /* 固定宽度，与PC版相同 */
+                max-width: 130px !important;
                 min-width: 0 !important;
-                width: auto !important;
-                max-width: none !important;
                 padding: 0 2px;
             }
             .level-grid .level-btn .level-icon {
@@ -2111,7 +2111,6 @@
         function adjustScale() {
             const isMobile = window.innerWidth <= 768;
             if (!isMobile) {
-                // PC 端恢復正常
                 const app = document.getElementById('app');
                 app.style.transform = '';
                 app.style.left = '';
@@ -2124,12 +2123,12 @@
             }
             const app = document.getElementById('app');
             const baseWidth = 1100;
-            const baseHeight = 618.75; // 1100 * 9 / 16
+            const baseHeight = 618.75;
             const winWidth = window.innerWidth;
             const winHeight = window.innerHeight;
             const scaleX = winWidth / baseWidth;
             const scaleY = winHeight / baseHeight;
-            const scale = Math.min(scaleX, scaleY, 1); // 不放大，只缩小
+            const scale = Math.min(scaleX, scaleY, 1);
             app.style.transform = `translate(-50%, -50%) scale(${scale})`;
             app.style.transformOrigin = 'center center';
             app.style.position = 'absolute';
@@ -2146,7 +2145,7 @@
             setTimeout(adjustScale, 300);
         });
         adjustScale();
-        console.log('📱 手機縮放適配已啟用 (關卡按鈕強制一行)');
+        console.log('📱 手機縮放適配已啟用 (關卡按鈕固定寬度，與PC一致)');
     </script>
 </body>
 </html>
