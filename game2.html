@@ -23,34 +23,44 @@
             touch-action: none;
         }
 
-        /* ★★★ 手機端適配：強制16:9比例並居中 ★★★ */
+        /* ★★★ 手機端適配：整體等比縮放，保持16:9，黑邊填充 ★★★ */
         @media (max-width: 768px) {
             body {
-                background: #000 !important;    /* 填充黑色 */
+                background: #000 !important;
                 display: flex;
                 justify-content: center;
                 align-items: center;
+                overflow: hidden;
             }
             #app {
-                width: 100vw;
-                height: 56.25vw;               /* 16:9 寬度優先 */
-                max-height: 100vh;
-                max-width: 177.78vh;            /* 高度優先時限制寬度 */
-                aspect-ratio: 16 / 9;
-                /* 原本的 height:100% 被覆蓋，改為固定比例 */
-                height: auto !important;
-                /* 保持原本的 max-width:1100px 仍然有效 */
-                max-width: 1100px;
-                /* 置中 */
-                margin: 0 auto;
-                /* 背景黑色，但 #app 本身有背景色，無需重複 */
+                position: absolute;
+                left: 50%;
+                top: 50%;
+                transform: translate(-50%, -50%) scale(1);
+                transform-origin: center center;
+                width: 1100px;
+                height: 618.75px; /* 1100*9/16 */
+                max-width: none;
+                max-height: none;
+                /* 其他样式继承自原始，但覆盖尺寸 */
+                flex-shrink: 0;
             }
-            /* 確保 #game 和 #river 佔滿 #app */
-            #game {
-                height: 100% !important;
+            /* 防止内部元素溢出 */
+            .screen {
+                padding: 12px 16px;
             }
-            #river {
-                height: 100% !important;
+            /* 调整音量面板大小，避免太大 */
+            .menu-volume {
+                padding: 6px 10px;
+                min-width: 100px;
+                right: 10px;
+                bottom: 10px;
+            }
+            .menu-volume .vol-row {
+                font-size: 0.6rem;
+            }
+            .menu-volume .vol-row label {
+                width: 36px;
             }
         }
 
@@ -68,7 +78,7 @@
             position: relative;
         }
 
-        /* ===== 以下為原始 CSS，未改動 ===== */
+        /* ===== 以下為原始 CSS（未改動） ===== */
         .screen {
             position: absolute;
             inset: 0;
@@ -746,7 +756,7 @@
         #orientation-tip.show { display: flex; }
         @media (min-width: 769px) { #orientation-tip { display: none !important; } }
 
-        /* 手機端調整 */
+        /* 手機端其他細微調整（保留原有一些樣式） */
         @media (max-width: 500px) {
             #header { height: 44px; padding: 0 10px; font-size: 0.7rem; }
             #btn-back { font-size: 0.7rem; padding: 3px 10px; }
@@ -1017,7 +1027,7 @@
     </div>
 
     <!-- ============================================================ -->
-    <!-- 以下 JavaScript 完全保持原樣，未改動任何邏輯                 -->
+    <!-- 以下 JavaScript 完全保持原樣，僅在末尾增加手機縮放適配     -->
     <!-- ============================================================ -->
     <script>
         // ================================================================
@@ -2083,9 +2093,51 @@
         game.classList.remove('active');
         selectedMode = 'sound';
         selectedLevel = 0;
-        console.log('🌊 青流字旅 · 文字漂流記 已啟動 (堆疊錯誤已修正)');
-        console.log('📁 圖片路徑：asset/ 和 marble/');
-        console.log('💡 點擊按鈕即可啟動 BGM 並進入遊戲');
+        console.log('🌊 青流字旅 · 文字漂流記 已啟動');
+
+        // ★★★ 手機端整體縮放適配（僅在手機上生效） ★★★
+        function adjustScale() {
+            const isMobile = window.innerWidth <= 768;
+            if (!isMobile) {
+                // PC 端恢復正常
+                const app = document.getElementById('app');
+                app.style.transform = '';
+                app.style.left = '';
+                app.style.top = '';
+                app.style.width = '';
+                app.style.height = '';
+                app.style.maxWidth = '1100px';
+                app.style.maxHeight = '';
+                return;
+            }
+            const app = document.getElementById('app');
+            const baseWidth = 1100;
+            const baseHeight = 618.75; // 1100 * 9 / 16
+            const winWidth = window.innerWidth;
+            const winHeight = window.innerHeight;
+            const scaleX = winWidth / baseWidth;
+            const scaleY = winHeight / baseHeight;
+            const scale = Math.min(scaleX, scaleY, 1); // 不放大，只缩小
+            // 設定 transform，並保持居中
+            app.style.transform = `translate(-50%, -50%) scale(${scale})`;
+            app.style.transformOrigin = 'center center';
+            app.style.position = 'absolute';
+            app.style.left = '50%';
+            app.style.top = '50%';
+            app.style.width = baseWidth + 'px';
+            app.style.height = baseHeight + 'px';
+            app.style.maxWidth = 'none';
+            app.style.maxHeight = 'none';
+        }
+
+        // 監聽 resize 和 orientation change
+        window.addEventListener('resize', adjustScale);
+        window.addEventListener('orientationchange', function() {
+            setTimeout(adjustScale, 300);
+        });
+        // 初始執行
+        adjustScale();
+        console.log('📱 手機縮放適配已啟用');
     </script>
 </body>
 </html>
