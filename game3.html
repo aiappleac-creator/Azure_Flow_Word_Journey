@@ -1,0 +1,2152 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>青流字旅 · 文字漂流記</title>
+    <style>
+        /* ===== 全域重置 ===== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Comic Sans MS', 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+            background: #0a2a3a;
+            touch-action: none;
+        }
+
+        #app {
+            width: 100%;
+            height: 100%;
+            max-width: 1100px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            background: #3c8db5;
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
+            touch-action: none;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* ★★★ 手機端整體縮放 & 關卡按鈕一行顯示 ★★★ */
+        @media (max-width: 768px) {
+            body {
+                background: #000 !important;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                overflow: hidden;
+            }
+            #app {
+                position: absolute;
+                left: 50%;
+                top: 50%;
+                transform: translate(-50%, -50%) scale(1);
+                transform-origin: center center;
+                width: 1100px;
+                height: 618.75px; /* 1100*9/16 */
+                max-width: none;
+                max-height: none;
+                flex-shrink: 0;
+            }
+            .screen {
+                padding: 12px 16px;
+            }
+            .menu-volume {
+                padding: 6px 10px;
+                min-width: 100px;
+                right: 10px;
+                bottom: 10px;
+            }
+            .menu-volume .vol-row {
+                font-size: 0.6rem;
+            }
+            .menu-volume .vol-row label {
+                width: 36px;
+            }
+
+            /* ★★★ 關卡按鈕強制一行顯示 ★★★ */
+            .level-grid {
+                display: flex !important;
+                flex-wrap: nowrap !important;
+                gap: 4px !important;
+                justify-content: center !important;
+                max-width: 100% !important;
+                padding: 0 4px;
+            }
+            .level-grid .level-btn {
+                flex: 1 1 0 !important;
+                min-width: 0 !important;
+                width: auto !important;
+                max-width: none !important;
+                padding: 0 2px;
+            }
+            .level-grid .level-btn .level-icon {
+                width: 100% !important;
+                height: auto !important;
+                border-radius: 4px;
+            }
+            .level-grid .level-btn .level-label {
+                display: none !important;
+            }
+        }
+
+        /* ===== 以下為原始 CSS（未改動） ===== */
+        .screen {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 12px 16px;
+            transition: opacity 0.4s ease;
+            z-index: 10;
+        }
+        .screen.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        .screen .title {
+            font-size: clamp(3.8rem, 16vw, 6.5rem);
+            font-weight: 900;
+            color: #fffbe6;
+            text-shadow: 0 6px 40px rgba(0, 0, 0, 0.8), 0 0 80px rgba(255, 200, 50, 0.4);
+            letter-spacing: 12px;
+            margin-bottom: 1px;
+            animation: titlePulse 2.5s ease-in-out infinite;
+            position: relative;
+            z-index: 1;
+            text-align: center;
+            line-height: 1.2;
+        }
+        .screen .title::after {
+            display: none;
+        }
+        @keyframes titlePulse {
+            0%,
+            100% {
+                text-shadow: 0 6px 40px rgba(0, 0, 0, 0.8), 0 0 80px rgba(255, 200, 50, 0.4);
+            }
+            50% {
+                text-shadow: 0 6px 60px rgba(0, 0, 0, 0.9), 0 0 120px rgba(255, 200, 50, 0.6);
+            }
+        }
+        .screen .sub {
+            font-size: clamp(1.3rem, 4.5vw, 2.2rem);
+            color: #b3e4ff;
+            margin-bottom: 3px;
+            letter-spacing: 8px;
+            text-shadow: 0 2px 15px rgba(0, 0, 0, 0.3);
+            position: relative;
+            z-index: 1;
+            font-weight: 300;
+            text-align: center;
+        }
+        .screen .sub::before,
+        .screen .sub::after {
+            content: '〜';
+            color: rgba(255, 215, 0, 0.2);
+            font-size: 0.7em;
+            margin: 0 8px;
+        }
+        .screen .btn-group {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            width: 100%;
+            max-width: 580px;
+            position: relative;
+            z-index: 1;
+            align-items: center;
+        }
+
+        /* ----- 主選單純圖片按鈕 ----- */
+        .icon-btn {
+            background: none !important;
+            border: none !important;
+            padding: 0 !important;
+            box-shadow: none !important;
+            cursor: pointer;
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+            display: block;
+            line-height: 0;
+            width: 100%;
+            text-align: center;
+        }
+        .icon-btn:hover {
+            transform: scale(1.04);
+        }
+        .icon-btn:active {
+            transform: scale(0.94);
+        }
+        .icon-btn img {
+            display: inline-block;
+            width: 360px;
+            max-width: 92%;
+            height: auto;
+            filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.3));
+        }
+
+        /* ===== 選單背景 ===== */
+        #menu {
+            background-image: url('asset/background_board.png');
+            background-size: cover;
+            background-position: center;
+            z-index: 100;
+        }
+        #menu::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 30, 50, 0.55);
+            backdrop-filter: blur(8px);
+            z-index: -1;
+        }
+
+        /* ===== 音量面板 ===== */
+        .menu-volume {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(6px);
+            padding: 10px 14px;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 10;
+            min-width: 140px;
+        }
+        .menu-volume .vol-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.7rem;
+            color: #ddd;
+        }
+        .menu-volume .vol-row label {
+            width: 50px;
+            text-align: right;
+        }
+        .menu-volume .vol-row input[type="range"] {
+            flex: 1;
+            height: 3px;
+            -webkit-appearance: none;
+            background: #888;
+            border-radius: 2px;
+            outline: none;
+        }
+        .menu-volume .vol-row input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #4caf50;
+            cursor: pointer;
+        }
+        .menu-volume .vol-row .vol-val {
+            min-width: 30px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 0.7rem;
+            color: #fff;
+        }
+
+        /* ===== 關卡選擇畫面 ===== */
+        #level-select {
+            background-image: url('asset/background_board.png');
+            background-size: cover;
+            background-position: center;
+            z-index: 90;
+        }
+        #level-select::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 30, 50, 0.6);
+            backdrop-filter: blur(6px);
+            z-index: -1;
+        }
+
+        /* ----- 折叠教学面板 ----- */
+        .tutorial-fold {
+            width: 100%;
+            max-width: 520px;
+            margin: 2px auto 6px auto;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(4px);
+            transition: background 0.2s;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+        .tutorial-fold summary {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px 14px;
+            font-size: clamp(1rem, 3vw, 1.3rem);
+            font-weight: 700;
+            color: #fffbe6;
+            cursor: pointer;
+            list-style: none;
+            position: relative;
+            transition: background 0.2s;
+        }
+        .tutorial-fold summary::-webkit-details-marker {
+            display: none;
+        }
+        .tutorial-fold summary::after {
+            content: '▶';
+            margin-left: 10px;
+            font-size: 0.8em;
+            transition: transform 0.3s ease;
+        }
+        .tutorial-fold[open] summary::after {
+            transform: rotate(90deg);
+        }
+        .tutorial-fold summary:hover {
+            background: rgba(255, 255, 255, 0.08);
+        }
+        .tutorial-fold .tutorial-content {
+            padding: 0 16px 12px 16px;
+            color: #d4e8f0;
+            font-size: clamp(0.9rem, 2.5vw, 1.1rem);
+            line-height: 1.6;
+            text-align: left;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            max-height: 130px;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255,255,255,0.3) transparent;
+        }
+        .tutorial-content::-webkit-scrollbar {
+            width: 4px;
+        }
+        .tutorial-content::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .tutorial-content::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.3);
+            border-radius: 4px;
+        }
+        .tutorial-fold .tutorial-content p {
+            margin: 4px 0;
+        }
+        .tutorial-fold .tutorial-content .highlight {
+            color: #ffd700;
+            font-weight: 600;
+        }
+        .tutorial-fold .tutorial-content .success {
+            color: #7bed9f;
+        }
+
+        /* 關卡按鈕（原始樣式，手機端會被覆蓋） */
+        .level-grid {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 6px;
+            margin: 4px 0 8px 0;
+            width: 100%;
+            max-width: 700px;
+        }
+        .level-grid .level-btn {
+            background: none !important;
+            border: none !important;
+            padding: 0 !important;
+            box-shadow: none !important;
+            cursor: pointer;
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+            display: block;
+            line-height: 0;
+            flex: 0 0 auto;
+            width: 130px;
+        }
+        .level-grid .level-btn:hover {
+            transform: scale(1.08);
+        }
+        .level-grid .level-btn:active {
+            transform: scale(0.94);
+        }
+        .level-grid .level-btn .level-icon {
+            width: 100%;
+            height: auto;
+            display: block;
+            filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.3));
+            border-radius: 8px;
+        }
+        .level-grid .level-btn .level-label {
+            display: none;
+        }
+        .level-grid .level-btn.active {
+            transform: scale(1.12);
+            filter: drop-shadow(0 0 12px rgba(255, 215, 0, 0.7));
+        }
+
+        /* 返回按钮 */
+        .back-icon-btn {
+            background: none !important;
+            border: none !important;
+            padding: 0 !important;
+            box-shadow: none !important;
+            cursor: pointer;
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+            display: block;
+            line-height: 0;
+            width: 100%;
+            max-width: 180px;
+            margin: 4px auto 0;
+            text-align: center;
+        }
+        .back-icon-btn:hover {
+            transform: scale(1.05);
+        }
+        .back-icon-btn:active {
+            transform: scale(0.94);
+        }
+        .back-icon-btn img {
+            width: 100%;
+            height: auto;
+            display: block;
+            filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.3));
+            border-radius: 8px;
+        }
+
+        /* ===== 遊戲主畫面 ===== */
+        #game {
+            display: none;
+            flex-direction: column;
+            flex: 1;
+            z-index: 2;
+            min-height: 0;
+        }
+        #game.active {
+            display: flex;
+        }
+
+        #header {
+            flex-shrink: 0;
+            height: 48px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 16px;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            color: #fff;
+            font-size: clamp(0.9rem, 2.2vw, 1.1rem);
+            font-weight: 600;
+            z-index: 10;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+        }
+        #header .info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        #header .badge {
+            background: rgba(255, 215, 0, 0.2);
+            padding: 2px 14px;
+            border-radius: 20px;
+            color: #ffecb3;
+        }
+        #header .level-badge {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 2px 14px;
+            border-radius: 20px;
+        }
+        #btn-back {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 30px;
+            padding: 6px 18px;
+            color: #fff;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+            font-family: inherit;
+        }
+        #btn-back:hover {
+            background: rgba(255, 255, 255, 0.25);
+        }
+        #btn-back:active {
+            transform: scale(0.95);
+        }
+
+        #river {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            touch-action: none;
+            min-height: 0;
+            background-color: #4a8bb5;
+        }
+        #river-bg {
+            position: absolute;
+            inset: 0;
+            background-image: url('asset/background_board.png');
+            background-size: cover;
+            background-position: center;
+            z-index: 0;
+            opacity: 0.8;
+        }
+        #river-bg.error {
+            display: none;
+        }
+        #sign {
+            position: absolute;
+            left: 19.27%;
+            top: 73.52%;
+            transform: translate(-50%, -50%);
+            z-index: 4;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+        #sign-text {
+            font-family: '華文楷體', 'STKaiti', 'KaiTi', '標楷體', 'DFKai-SB', 'Times New Roman', serif;
+            font-size: clamp(2.8rem, 7vw, 4.2rem);
+            font-weight: 700;
+            color: #faf0c0;
+            text-shadow: 0 4px 12px rgba(0, 0, 0, 0.8), 0 0 30px rgba(255, 215, 0, 0.3);
+            letter-spacing: 8px;
+            line-height: 1.2;
+        }
+        #sign-sub {
+            display: none;
+        }
+        #decision-indicator {
+            position: absolute;
+            left: 73.00%;
+            top: 68.20%;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: 4px solid rgba(255, 215, 0, 0.9);
+            box-shadow: 0 0 40px rgba(255, 215, 0, 0.7), inset 0 0 40px rgba(255, 215, 0, 0.3);
+            z-index: 5;
+            pointer-events: none;
+            animation: pulse-ring 1.5s ease-in-out infinite;
+            transform: translate(-50%, -50%);
+            will-change: left, top;
+        }
+        #decision-indicator::after {
+            content: '⬅ 點擊';
+            position: absolute;
+            top: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #fff;
+            font-size: 0.8rem;
+            font-weight: bold;
+            text-shadow: 0 0 10px rgba(0, 0, 0, 0.8);
+            white-space: nowrap;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 2px 10px;
+            border-radius: 12px;
+        }
+        @keyframes pulse-ring {
+            0% { transform: translate(-50%, -50%) scale(0.9); opacity: 0.7; }
+            50% { transform: translate(-50%, -50%) scale(1.2); opacity: 1; }
+            100% { transform: translate(-50%, -50%) scale(0.9); opacity: 0.7; }
+        }
+        .marble {
+            position: absolute;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            z-index: 3;
+            cursor: pointer;
+            pointer-events: auto;
+            border: none;
+            box-shadow: none;
+            will-change: left, top, width, height, opacity;
+            border-radius: 50%;
+            transition: none;
+        }
+        .marble.fallback {
+            background: radial-gradient(circle at 30% 30%, #8fdf7a, #4caf50 60%, #2e7d32) !important;
+            border: 2px solid #a5d6a7;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            background-image: none !important;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .marble.fallback .fallback-char {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: #fff;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+            pointer-events: none;
+        }
+        .marble.collected {
+            animation: collectPop 0.5s ease forwards;
+        }
+        @keyframes collectPop {
+            0% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(255, 215, 0, 0)); }
+            40% { transform: scale(1.4); filter: drop-shadow(0 0 80px rgba(255, 215, 0, 0.9)); }
+            100% { transform: scale(0); opacity: 0; }
+        }
+        .marble.in-decision-zone {
+            filter: drop-shadow(0 0 20px rgba(255, 215, 0, 0.6));
+            transition: filter 0.2s;
+        }
+        .ripple-effect {
+            position: absolute;
+            border-radius: 50%;
+            border: 3px solid rgba(255, 215, 0, 0.7);
+            pointer-events: none;
+            z-index: 4;
+            animation: rippleOut 0.8s ease-out forwards;
+        }
+        @keyframes rippleOut {
+            0% { width: 10px; height: 10px; opacity: 1; transform: translate(-50%, -50%) scale(0.3); }
+            100% { width: 130px; height: 130px; opacity: 0; transform: translate(-50%, -50%) scale(1.5); }
+        }
+        #controls {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 10px 20px 16px;
+            background: linear-gradient(0deg, rgba(0, 20, 35, 0.4) 0%, transparent 100%);
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            z-index: 10;
+            pointer-events: none;
+        }
+        #controls>* {
+            pointer-events: auto;
+        }
+        .tts-control {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(4px);
+            padding: 4px 12px 4px 8px;
+            border-radius: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            font-size: 0.85rem;
+        }
+        .tts-control input[type="range"] {
+            width: 60px;
+            height: 3px;
+            -webkit-appearance: none;
+            background: #888;
+            border-radius: 2px;
+            outline: none;
+        }
+        .tts-control input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #4caf50;
+            cursor: pointer;
+        }
+        .tts-control .vol-label {
+            min-width: 28px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 0.7rem;
+        }
+
+        /* ===== 關卡完成介面 ===== */
+        #level-complete {
+            position: absolute;
+            inset: 0;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0, 20, 30, 0.7);
+            backdrop-filter: blur(8px);
+            z-index: 50;
+            padding: 30px 20px;
+            animation: fadePop 0.4s ease;
+        }
+        #level-complete.show {
+            display: flex;
+        }
+        @keyframes fadePop {
+            0% { opacity: 0; transform: scale(0.85); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+        .lc-icon { font-size: clamp(4rem, 15vw, 6rem); margin-bottom: 6px; }
+        .lc-msg { font-size: clamp(1.8rem, 7vw, 3.2rem); font-weight: 800; color: #fff9e0; text-shadow: 0 4px 24px rgba(0,0,0,0.5); text-align: center; margin-bottom: 4px; }
+        .lc-sub { font-size: clamp(1rem, 3.5vw, 1.5rem); color: #c8e6f0; margin-top: 2px; text-align: center; }
+        .lc-error-list {
+            font-size: clamp(1.1rem, 3vw, 1.6rem);
+            color: #ffcd94;
+            text-align: center;
+            max-width: 80%;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 8px 16px;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 200, 100, 0.2);
+            margin: 6px 0 12px 0;
+            line-height: 1.6;
+        }
+        .lc-error-list .error-char { color: #ff6b6b; font-weight: 700; background: rgba(255,0,0,0.15); padding: 2px 8px; border-radius: 8px; margin: 0 4px; }
+        .lc-error-list .correct-count { color: #ffd700; font-weight: 700; }
+        .lc-error-list .label { color: #aad4e6; }
+
+        .lc-btn-group {
+            display: flex;
+            gap: 22px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-top: 12px;
+        }
+        .lc-btn-group .lc-icon-btn {
+            background: none !important;
+            border: none !important;
+            padding: 0 !important;
+            box-shadow: none !important;
+            cursor: pointer;
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+            display: block;
+            line-height: 0;
+            flex: 0 0 auto;
+            width: 220px;
+            text-align: center;
+        }
+        .lc-btn-group .lc-icon-btn:hover {
+            transform: scale(1.08);
+        }
+        .lc-btn-group .lc-icon-btn:active {
+            transform: scale(0.94);
+        }
+        .lc-btn-group .lc-icon-btn img {
+            width: 100%;
+            height: auto;
+            display: block;
+            filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.3));
+            border-radius: 8px;
+        }
+        .lc-btn-group .lc-icon-btn .fallback-label {
+            display: none;
+            font-size: 0.9rem;
+            color: #fff;
+            background: rgba(0,0,0,0.5);
+            padding: 4px 8px;
+            border-radius: 4px;
+            margin-top: 4px;
+        }
+        .lc-btn-group .lc-icon-btn img.error + .fallback-label {
+            display: block;
+        }
+
+        #load-status, #debug-info { display: none; }
+        #orientation-tip {
+            position: absolute;
+            inset: 0;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 200;
+            color: #fff;
+            font-size: 1.2rem;
+            padding: 30px;
+            text-align: center;
+        }
+        #orientation-tip.show { display: flex; }
+        @media (min-width: 769px) { #orientation-tip { display: none !important; } }
+
+        /* 手機端其他細微調整 */
+        @media (max-width: 500px) {
+            #header { height: 44px; padding: 0 10px; font-size: 0.7rem; }
+            #btn-back { font-size: 0.7rem; padding: 3px 10px; }
+            .marble { width: 150px; height: 150px; }
+            .marble.fallback .fallback-char { font-size: 2rem; }
+            #decision-indicator { width: 40px; height: 40px; }
+            #decision-indicator::after { font-size: 0.6rem; top: -24px; padding: 0 8px; }
+            .menu-volume { padding: 8px 10px; min-width: 100px; bottom: 12px; right: 12px; }
+            .menu-volume .vol-row { font-size: 0.6rem; }
+            .menu-volume .vol-row label { width: 36px; }
+            .tts-control input[type="range"] { width: 40px; }
+            .icon-btn img { width: 270px; }
+            .screen .btn-group { gap: 2px; }
+            .screen .title { font-size: clamp(2.8rem, 14vw, 4.5rem); letter-spacing: 6px; margin-bottom: 0px; }
+            .screen .sub { font-size: clamp(1rem, 4vw, 1.6rem); margin-bottom: 2px; }
+            .screen { padding: 8px 10px; }
+            .tutorial-fold summary { font-size: 0.85rem; padding: 6px 10px; }
+            .tutorial-fold .tutorial-content { font-size: 0.8rem; max-height: 100px; padding: 0 10px 10px 10px; }
+            .tutorial-fold { margin: 2px auto 4px auto; }
+            .back-icon-btn { max-width: 140px; }
+            .lc-btn-group .lc-icon-btn { width: 150px; }
+            .lc-btn-group { gap: 16px; }
+        }
+
+        @media (min-width: 768px) {
+            .marble { width: 200px; height: 200px; }
+            .marble.fallback .fallback-char { font-size: 3rem; }
+        }
+
+        .water-particle {
+            position: absolute;
+            border-radius: 50%;
+            pointer-events: none;
+            will-change: left, top;
+            z-index: 1;
+            transition: none;
+        }
+
+        /* ===== 記錄彈窗 ===== */
+        .stats-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 300;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(8px);
+            animation: fadeIn 0.3s ease;
+        }
+        .stats-modal.show { display: flex; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .stats-modal .modal-content {
+            background: rgba(20, 40, 60, 0.95);
+            border-radius: 24px;
+            padding: 30px 30px 20px;
+            max-width: 520px;
+            width: 100%;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+            max-height: 80vh;
+            overflow-y: auto;
+            color: #e0f0ff;
+        }
+        .stats-modal .modal-title {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: #fffbe6;
+            text-align: center;
+            margin-bottom: 16px;
+            letter-spacing: 2px;
+        }
+        .stats-modal .stat-block {
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .stats-modal .stat-block:last-child { border-bottom: none; margin-bottom: 0; }
+        .stats-modal .mode-title { font-size: 1.1rem; font-weight: 600; color: #b3e4ff; margin-bottom: 6px; }
+        .stats-modal .stat-row { display: flex; justify-content: space-between; padding: 2px 0; font-size: 0.95rem; }
+        .stats-modal .stat-label { color: #aac; }
+        .stats-modal .stat-value { font-weight: 600; color: #ffd700; }
+        .stats-modal .level-dots { display: flex; gap: 6px; margin-top: 4px; }
+        .stats-modal .level-dots .dot {
+            width: 24px; height: 24px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.2);
+            display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 700;
+        }
+        .stats-modal .level-dots .dot.done { background: #4caf50; border-color: #4caf50; color: #fff; }
+        .stats-modal .level-dots .dot.pending { background: rgba(255,255,255,0.1); color: #888; }
+        .history-list {
+            margin-top: 6px;
+            max-height: 120px;
+            overflow-y: auto;
+            font-size: 0.8rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            padding-top: 4px;
+        }
+        .history-item {
+            padding: 3px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 2px 6px;
+            align-items: baseline;
+        }
+        .history-item .time { color: #8ab; font-size: 0.7rem; min-width: 70px; }
+        .history-item .detail { color: #c8d8e8; }
+        .history-item .detail .char-item { display: inline-block; padding: 0 3px; border-radius: 3px; margin: 0 1px; }
+        .history-item .detail .char-item.missing { color: #ffa07a; background: rgba(255,0,0,0.15); }
+        .history-item .detail .char-item.error { color: #ff6b6b; background: rgba(255,0,0,0.2); }
+        .history-item .detail .char-item.ok { color: #7bed9f; }
+        .history-item .status { font-weight: 600; font-size: 0.7rem; }
+        .history-item .status.done { color: #4caf50; }
+        .history-item .status.fail { color: #ffa07a; }
+        .stats-modal .close-btn {
+            display: block;
+            margin: 16px auto 0;
+            padding: 8px 32px;
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            border-radius: 30px;
+            color: #fff;
+            font-size: 1rem;
+            cursor: pointer;
+            font-family: inherit;
+            transition: background 0.2s;
+            text-align: center;
+        }
+        .stats-modal .close-btn:hover { background: rgba(255, 255, 255, 0.25); }
+        .stats-modal .close-btn:active { transform: scale(0.95); }
+        .stats-modal .clear-btn {
+            display: block;
+            margin: 12px auto 0;
+            padding: 6px 20px;
+            background: rgba(255, 80, 80, 0.2);
+            border: 1px solid rgba(255, 80, 80, 0.4);
+            border-radius: 30px;
+            color: #ffa07a;
+            font-size: 0.9rem;
+            cursor: pointer;
+            font-family: inherit;
+            transition: background 0.2s;
+            text-align: center;
+        }
+        .stats-modal .clear-btn:hover {
+            background: rgba(255, 80, 80, 0.35);
+        }
+        .stats-modal .clear-btn:active {
+            transform: scale(0.95);
+        }
+        .stats-modal .modal-content::-webkit-scrollbar,
+        .history-list::-webkit-scrollbar { width: 4px; }
+        .stats-modal .modal-content::-webkit-scrollbar-track,
+        .history-list::-webkit-scrollbar-track { background: transparent; }
+        .stats-modal .modal-content::-webkit-scrollbar-thumb,
+        .history-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <!-- ===== 選單畫面 ===== -->
+        <div id="menu" class="screen">
+            <div class="title">🌊 青流字旅</div>
+            <div class="sub">— 文字漂流記 —</div>
+
+            <div class="btn-group">
+                <button class="icon-btn" id="btn-sound-mode">
+                    <img src="asset/sound_icon.png" alt="偏旁配對" />
+                </button>
+                <button class="icon-btn" id="btn-radical-mode">
+                    <img src="asset/radical_icon.png" alt="部首配對" />
+                </button>
+                <button class="icon-btn" id="btn-stats">
+                    <img src="asset/record_icon.png" alt="查看記錄" />
+                </button>
+            </div>
+
+            <!-- 音量面板 -->
+            <div class="menu-volume">
+                <div class="vol-row">
+                    <label>🎵 BGM</label>
+                    <input type="range" id="bgm-volume-slider" min="0" max="1" step="0.01" value="1" />
+                    <span class="vol-val" id="bgm-vol-label">100%</span>
+                </div>
+                <div class="vol-row">
+                    <label>🔊 音效</label>
+                    <input type="range" id="sfx-volume-slider" min="0" max="1" step="0.01" value="1" />
+                    <span class="vol-val" id="sfx-vol-label">100%</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== 關卡選擇畫面 ===== -->
+        <div id="level-select" class="screen hidden">
+            <div class="title" id="level-title">📚 選擇關卡</div>
+            <div class="sub" id="level-sub">偏旁配對 · 共 5 關</div>
+
+            <details class="tutorial-fold">
+                <summary>📖 遊戲教學</summary>
+                <div class="tutorial-content">
+                    <p>🎯 <span class="highlight">目標</span>：在漂流而來的彈珠中，找出與目標字（偏旁／部首）配對的正確家族字。</p>
+                    <p>🔄 <span class="highlight">玩法</span>：當彈珠漂流到 <span class="success">金色光圈</span> 內時，<strong>「傾斜裝置」或「按鍵盤」</strong>即可收集。</p>
+                    <p>🏆 <span class="highlight">通關條件</span>：收集全部 <span class="highlight">8 個</span> 正確家族字即可過關。</p>
+                    <p style="margin-top:4px; font-size:0.9em; color:#aac;">💡 提示：每個彈珠只會漂流一次，錯過就無法再收集了！</p>
+                </div>
+            </details>
+
+            <div class="level-grid" id="level-grid"></div>
+            <button class="back-icon-btn" id="back-to-menu">
+                <img src="asset/back_icon.png" alt="返回選單" />
+            </button>
+            <div class="footer" style="margin-top:4px;font-size:0.75rem;color:#b3e4ff;">點選關卡圖片開始遊戲</div>
+        </div>
+
+        <!-- ===== 遊戲主畫面 ===== -->
+        <div id="game">
+            <div id="header">
+                <div class="info">
+                    <span>🏆</span>
+                    <span class="badge" id="collect-display">0／8</span>
+                </div>
+                <div class="level-badge" id="level-display">⭐ 第 1 關</div>
+                <button id="btn-back">⬅ 返回</button>
+            </div>
+
+            <div id="river">
+                <div id="river-bg"></div>
+                <div id="water-container" style="position:absolute;inset:0;z-index:1;pointer-events:none;"></div>
+                <div id="sign">
+                    <div id="sign-text">青</div>
+                    <div id="sign-sub">讀音</div>
+                </div>
+                <div id="decision-indicator"></div>
+                <div id="marble-container" style="position:absolute;inset:0;z-index:3;pointer-events:none;"></div>
+                <div id="controls">
+                    <div class="tts-control">
+                        <span>🗣️</span>
+                        <input type="range" id="tts-volume-slider" min="0" max="1" step="0.01" value="1" />
+                        <span class="vol-label" id="tts-vol-label">100%</span>
+                    </div>
+                </div>
+            </div>
+
+            <div id="level-complete">
+                <div class="lc-icon" id="lc-icon">🎉</div>
+                <div class="lc-msg" id="lc-msg">太棒了！</div>
+                <div class="lc-sub" id="lc-sub">進入下一關</div>
+                <div id="lc-error-info" class="lc-error-list"></div>
+                <div class="lc-btn-group" id="lc-btn-group"></div>
+            </div>
+        </div>
+
+        <div id="orientation-tip">
+            <div style="font-size:4rem;">📱</div>
+            <div style="margin-top:16px;">請將裝置轉為直向</div>
+            <div style="font-size:0.9rem;opacity:0.6;margin-top:6px;">以獲得最佳體驗</div>
+        </div>
+    </div>
+
+    <!-- ===== 記錄彈窗 ===== -->
+    <div id="stats-modal" class="stats-modal">
+        <div class="modal-content" id="stats-modal-content"></div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- JavaScript 保持原樣，僅在末尾增加縮放適配                    -->
+    <!-- ============================================================ -->
+    <script>
+        // ================================================================
+        //  📦 字庫資料
+        // ================================================================
+        const soundModeData = [
+            { target: "青", correct: ["清", "晴", "請", "情", "蜻", "精", "睛", "靖"], distractors: ["抱", "鈴", "放", "很", "河", "拍", "嗎"] },
+            { target: "包", correct: ["抱", "飽", "炮", "跑", "泡", "袍", "苞", "雹"], distractors: ["晴", "領", "訪", "恨", "柯", "怕", "媽"] },
+            { target: "令", correct: ["鈴", "領", "零", "冷", "嶺", "齡", "玲", "拎"], distractors: ["請", "飽", "防", "根", "呵", "伯", "碼"] },
+            { target: "方", correct: ["放", "訪", "房", "防", "芳", "仿", "紡", "妨"], distractors: ["情", "炮", "玲", "狠", "坷", "柏", "螞"] },
+            { target: "艮", correct: ["很", "狠", "恨", "跟", "根", "銀", "限", "眼"], distractors: ["蜻", "泡", "拎", "仿", "何", "帕", "瑪"] }
+        ];
+        const radicalModeData = [
+            { target: "氵", targetLabel: "水", correct: ["清", "河", "泡", "泊", "浪", "派", "湖", "海"], distractors: ["精", "跑", "零", "紡", "銀", "珀", "加"] },
+            { target: "艹", targetLabel: "艹", correct: ["苞", "苛", "荷", "茄", "芳", "茫", "芒", "花"], distractors: ["睛", "袍", "冷", "妨", "跟", "泊", "望"] },
+            { target: "木", targetLabel: "木", correct: ["校", "柯", "椅", "架", "柏", "根", "樹", "林"], distractors: ["靖", "嶺", "限", "浪", "朗", "忙", "咖"] },
+            { target: "女", targetLabel: "女", correct: ["好", "媽", "妨", "妄", "娘", "姐", "妹", "姑"], distractors: ["餓", "鵝", "歌", "派", "拜", "艱", "嘉"] },
+            { target: "口", targetLabel: "口", correct: ["嗎", "望", "呵", "咖", "咬", "啊", "啦", "呀"], distractors: ["限", "魄", "校", "椅", "好", "哥", "教"] }
+        ];
+
+        let selectedLevel = 0;
+        let selectedMode = 'sound';
+
+        function getLevelData(mode, idx) {
+            const data = mode === 'sound' ? soundModeData : radicalModeData;
+            if (idx >= data.length) return null;
+            const d = data[idx];
+            const all = [...d.correct, ...d.distractors];
+            for (let i = all.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [all[i], all[j]] = [all[j], all[i]];
+            }
+            return { ...d, order: all, targetDisplay: d.target, subDisplay: mode === 'sound' ? '讀音' : (d.targetLabel || '部首') };
+        }
+
+        // ================================================================
+        //  🎯 路徑
+        // ================================================================
+        const PATH_OFFSET_X = 3.0;
+        const PATH_OFFSET_Y = -2.0;
+        const RAW_PATH = [
+            { x: 25.36, y: -10.00 }, { x: 27.82, y: -0.35 }, { x: 20.82, y: 5.38 },
+            { x: 12.36, y: 13.43 }, { x: 17.82, y: 22.55 }, { x: 23.91, y: 27.92 },
+            { x: 40.09, y: 37.75 }, { x: 49.91, y: 42.05 }, { x: 61.64, y: 51.71 },
+            { x: 65.64, y: 67.63 }, { x: 66.64, y: 81.05 }, { x: 66.73, y: 93.75 }
+        ];
+        const PATH_PERCENT = RAW_PATH.map(p => ({ x: p.x + PATH_OFFSET_X, y: p.y + PATH_OFFSET_Y }));
+        const SPEED_FACTORS = [0.8, 1.2, 0.6, 0.9, 1.0, 1.3, 1.1, 1.4, 0.7, 0.5, 0.6];
+        const TOTAL_DURATION = 14;
+        const VISUAL_TARGET_POS = { x: 73.00, y: 68.20 };
+        const LOGIC_TARGET_POS = { x: 69.00, y: 56.20 };
+        const COLLECTION_POINT = { x: 45.82, y: 87.30 };
+        const DETECT_RADIUS = 5.5;
+        const TTS_SPEED = 0.5;
+        const TTS_PITCH = 1.05;
+
+        let progressFn = null;
+
+        function createProgressFunction(points, speedFactors, totalDuration) {
+            const segs = [];
+            for (let i = 0; i < points.length - 1; i++) {
+                const dx = points[i + 1].x - points[i].x;
+                const dy = points[i + 1].y - points[i].y;
+                segs.push(Math.sqrt(dx * dx + dy * dy));
+            }
+            const weighted = segs.map((len, i) => len / (speedFactors[i] || 1.0));
+            const totalWeight = weighted.reduce((a, b) => a + b, 0);
+            const timeRatios = weighted.map(w => w / totalWeight);
+            const cumTime = [];
+            let cum = 0;
+            for (let i = 0; i < timeRatios.length; i++) {
+                cum += timeRatios[i];
+                cumTime.push(Math.min(cum, 1));
+            }
+            return function(elapsed) {
+                if (elapsed <= 0) return { x: points[0].x, y: points[0].y, progress: 0 };
+                if (elapsed >= totalDuration) {
+                    const last = points[points.length - 1];
+                    return { x: last.x, y: last.y, progress: 1 };
+                }
+                const t = elapsed / totalDuration;
+                let segIdx = 0;
+                for (let i = 0; i < cumTime.length; i++) {
+                    if (t <= cumTime[i]) { segIdx = i; break; }
+                }
+                if (segIdx >= cumTime.length) segIdx = cumTime.length - 1;
+                const prevTime = (segIdx === 0) ? 0 : cumTime[segIdx - 1];
+                const segDuration = timeRatios[segIdx];
+                const localT = (t - prevTime) / segDuration;
+                const clampedLocalT = Math.min(Math.max(localT, 0), 1);
+                const p0 = points[segIdx];
+                const p1 = points[segIdx + 1];
+                return {
+                    x: p0.x + (p1.x - p0.x) * clampedLocalT,
+                    y: p0.y + (p1.y - p0.y) * clampedLocalT,
+                    progress: (segIdx + clampedLocalT) / points.length
+                };
+            };
+        }
+
+        function buildProgressFn() {
+            progressFn = createProgressFunction(PATH_PERCENT, SPEED_FACTORS, TOTAL_DURATION);
+            document.getElementById('decision-indicator').style.left = VISUAL_TARGET_POS.x + '%';
+            document.getElementById('decision-indicator').style.top = VISUAL_TARGET_POS.y + '%';
+        }
+
+        // ---- DOM 參考 ----
+        const $ = id => document.getElementById(id);
+        const menu = $('menu'),
+            levelSelect = $('level-select'),
+            game = $('game');
+        const btnSound = $('btn-sound-mode'),
+            btnRadical = $('btn-radical-mode'),
+            btnStats = $('btn-stats');
+        const backToMenu = $('back-to-menu');
+        const levelTitle = $('level-title'),
+            levelSub = $('level-sub'),
+            levelGrid = $('level-grid');
+        const signText = $('sign-text'),
+            signSub = $('sign-sub');
+        const collectDisplay = $('collect-display'),
+            levelDisplay = $('level-display');
+        const marbleContainer = $('marble-container'),
+            waterContainer = $('water-container');
+        const lcOverlay = $('level-complete'),
+            lcIcon = $('lc-icon'),
+            lcMsg = $('lc-msg'),
+            lcSub = $('lc-sub'),
+            lcErrorInfo = $('lc-error-info'),
+            lcBtnGroup = $('lc-btn-group');
+        const river = $('river'),
+            riverBg = $('river-bg'),
+            indicator = $('decision-indicator');
+        const statsModal = $('stats-modal'),
+            statsModalContent = $('stats-modal-content');
+
+        const bgmSlider = $('bgm-volume-slider'),
+            bgmLabel = $('bgm-vol-label');
+        const sfxSlider = $('sfx-volume-slider'),
+            sfxLabel = $('sfx-vol-label');
+        const ttsSlider = $('tts-volume-slider'),
+            ttsLabel = $('tts-vol-label');
+
+        let bgmVolume = 1.0,
+            sfxVolume = 1.0,
+            ttsVolume = 1.0;
+
+        // ---- 音頻系統 ----
+        let audioCtx = null,
+            masterGain = null,
+            bgmInterval = null,
+            bgmEnabled = false;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new(window.AudioContext || window.webkitAudioContext)();
+                masterGain = audioCtx.createGain();
+                masterGain.gain.value = 1;
+                masterGain.connect(audioCtx.destination);
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function startBGM() {
+            if (bgmInterval) return;
+            initAudio();
+            if (!audioCtx) return;
+            bgmEnabled = true;
+            const notes = [261.63, 329.63, 392.00, 523.25];
+            let noteIndex = 0;
+            bgmInterval = setInterval(() => {
+                if (!masterGain || !bgmEnabled) return;
+                const freq = notes[noteIndex % notes.length];
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.value = freq;
+                const vol = 0.18 * bgmVolume;
+                gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+                osc.connect(gain);
+                gain.connect(masterGain);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.3);
+                noteIndex++;
+                if (noteIndex % 2 === 0) {
+                    const osc2 = audioCtx.createOscillator();
+                    const gain2 = audioCtx.createGain();
+                    osc2.type = 'sine';
+                    osc2.frequency.value = 65.41;
+                    const vol2 = 0.12 * bgmVolume;
+                    gain2.gain.setValueAtTime(vol2, audioCtx.currentTime);
+                    gain2.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
+                    osc2.connect(gain2);
+                    gain2.connect(masterGain);
+                    osc2.start();
+                    osc2.stop(audioCtx.currentTime + 0.5);
+                }
+            }, 700);
+            console.log('🎵 BGM 已啟動');
+        }
+
+        function stopBGM() {
+            bgmEnabled = false;
+            if (bgmInterval) { clearInterval(bgmInterval);
+                bgmInterval = null; }
+        }
+
+        bgmSlider.addEventListener('input', () => {
+            bgmVolume = parseFloat(bgmSlider.value);
+            bgmLabel.textContent = Math.round(bgmVolume * 100) + '%';
+        });
+        sfxSlider.addEventListener('input', () => {
+            sfxVolume = parseFloat(sfxSlider.value);
+            sfxLabel.textContent = Math.round(sfxVolume * 100) + '%';
+        });
+        ttsSlider.addEventListener('input', () => {
+            ttsVolume = parseFloat(ttsSlider.value);
+            ttsLabel.textContent = Math.round(ttsVolume * 100) + '%';
+        });
+
+        function playTone(freq, dur, type = 'sine', vol = 0.2) {
+            try {
+                initAudio();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = type;
+                osc.frequency.value = freq;
+                const finalVol = vol * sfxVolume;
+                gain.gain.setValueAtTime(finalVol, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+                osc.connect(gain);
+                gain.connect(masterGain);
+                osc.start();
+                osc.stop(audioCtx.currentTime + dur);
+            } catch (_) {}
+        }
+
+        function soundDing() { playTone(880, 0.15);
+            setTimeout(() => playTone(1100, 0.1), 70); }
+
+        function soundError() {
+            playTone(200, 0.15, 'sawtooth', 0.2);
+            setTimeout(() => playTone(150, 0.15, 'sawtooth', 0.18), 120);
+        }
+
+        function soundWater() { playTone(180, 0.3, 'sine', 0.06);
+            setTimeout(() => playTone(140, 0.35, 'sine', 0.05), 120); }
+
+        function soundLevelUp() {
+            [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => playTone(f, 0.12, 'sine', 0.15), i * 90));
+        }
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) { if (bgmInterval) stopBGM(); } else { const shouldPlay = !menu.classList.contains(
+                    'hidden') || game.classList.contains('active'); if (shouldPlay && !bgmInterval) startBGM(); }
+        });
+
+        // ---- 語音 ----
+        function getVoice() {
+            const voices = window.speechSynthesis.getVoices();
+            let voice = voices.find(v => v.name.toLowerCase().includes('microsoft tracy'));
+            if (voice) return voice;
+            const preferred = [
+                'Google 粵語（香港）', 'Google 香港粵語', 'Google Cantonese',
+                'Microsoft 慧慧', 'Microsoft Huihui', 'Microsoft 雅婷',
+                'Ting-Ting', 'Zira', 'Yating'
+            ];
+            for (const name of preferred) {
+                const found = voices.find(v => v.lang === 'zh-HK' && v.name.includes(name));
+                if (found) return found;
+            }
+            let fallback = voices.find(v => v.lang === 'zh-HK');
+            if (fallback) return fallback;
+            fallback = voices.find(v => v.lang.startsWith('zh'));
+            return fallback || null;
+        }
+
+        function speak(text, rate = TTS_SPEED) {
+            if (!window.speechSynthesis) return;
+            const voice = getVoice();
+            const u = new SpeechSynthesisUtterance(text);
+            u.lang = 'zh-HK';
+            if (voice) u.voice = voice;
+            u.rate = rate;
+            u.pitch = TTS_PITCH;
+            u.volume = ttsVolume;
+            window.speechSynthesis.speak(u);
+        }
+
+        function speakChar(char) { speak(char, TTS_SPEED); }
+
+        // ---- 記錄系統 ----
+        const STORAGE_KEY = 'qingliu_stats_v2';
+
+        function getDefaultStats() {
+            return {
+                sound: { history: [], totalCorrect: 0, totalErrors: 0 },
+                radical: { history: [], totalCorrect: 0, totalErrors: 0 }
+            };
+        }
+
+        function loadStats() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if (raw) {
+                    const data = JSON.parse(raw);
+                    const def = getDefaultStats();
+                    for (const mode of ['sound', 'radical']) {
+                        if (!data[mode]) data[mode] = def[mode];
+                        if (!data[mode].history) data[mode].history = [];
+                        if (typeof data[mode].totalCorrect !== 'number') data[mode].totalCorrect = 0;
+                        if (typeof data[mode].totalErrors !== 'number') data[mode].totalErrors = 0;
+                        data[mode].history = data[mode].history.map(entry => ({
+                            timestamp: entry.timestamp || '未知時間',
+                            level: entry.level !== undefined ? entry.level : 0,
+                            correctList: entry.correctList || [],
+                            collected: entry.collected || [],
+                            errors: entry.errors || [],
+                            completed: !!entry.completed
+                        }));
+                    }
+                    return data;
+                }
+            } catch (e) { console.warn('讀取記錄失敗', e); }
+            return getDefaultStats();
+        }
+
+        function saveStats(stats) {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(stats));
+            } catch (e) { console.warn('儲存記錄失敗', e); }
+        }
+
+        function addHistory(mode, level, correctList, collected, errors, completed) {
+            const stats = loadStats();
+            const now = new Date();
+            const timestamp =
+                `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+            stats[mode].history.push({ timestamp, level, correctList: correctList.slice(), collected: collected.slice(),
+                errors: errors.slice(), completed });
+            let totalCorrect = 0,
+                totalErrors = 0;
+            for (const e of stats[mode].history) {
+                totalCorrect += e.collected.length;
+                totalErrors += e.errors.length;
+            }
+            stats[mode].totalCorrect = totalCorrect;
+            stats[mode].totalErrors = totalErrors;
+            saveStats(stats);
+        }
+
+        function clearAllRecords() {
+            if (confirm('確定要清除所有遊戲記錄嗎？此操作無法復原。')) {
+                localStorage.removeItem(STORAGE_KEY);
+                renderStatsModal();
+            }
+        }
+
+        function renderStatsModal() {
+            const stats = loadStats();
+            let html = `<div class="modal-title">📊 遊戲記錄</div>`;
+            for (const mode of ['sound', 'radical']) {
+                const modeLabel = mode === 'sound' ? '🔊 偏旁配對' : '📖 部首配對';
+                const history = stats[mode].history;
+                const completedMap = {};
+                for (const entry of history) {
+                    if (entry.completed) completedMap[entry.level] = true;
+                }
+                const totalLevels = 5;
+                let completedCount = 0;
+                for (let i = 0; i < totalLevels; i++) {
+                    if (completedMap[i]) completedCount++;
+                }
+                let dotsHtml = '';
+                for (let i = 0; i < totalLevels; i++) {
+                    const cls = completedMap[i] ? 'dot done' : 'dot pending';
+                    const symbol = completedMap[i] ? '✓' : '·';
+                    dotsHtml += `<span class="${cls}">${symbol}</span>`;
+                }
+                html += `
+                    <div class="stat-block">
+                        <div class="mode-title">${modeLabel}</div>
+                        <div class="stat-row"><span class="stat-label">進度</span><span class="stat-value">${completedCount} / ${totalLevels}</span></div>
+                        <div class="stat-row"><span class="stat-label">正確收集</span><span class="stat-value">${stats[mode].totalCorrect}</span></div>
+                        <div class="stat-row"><span class="stat-label">誤選次數</span><span class="stat-value">${stats[mode].totalErrors}</span></div>
+                        <div class="stat-row" style="border-bottom: none; padding-bottom: 0;">
+                            <span class="stat-label">關卡狀態</span>
+                            <span class="level-dots">${dotsHtml}</span>
+                        </div>
+                `;
+                for (let level = 0; level < totalLevels; level++) {
+                    const levelHistory = history.filter(e => e.level === level);
+                    if (levelHistory.length === 0) continue;
+                    levelHistory.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+                    html += `<div style="margin-top:8px; border-top:1px solid rgba(255,255,255,0.06); padding-top:6px;">
+                        <div style="font-size:0.9rem; font-weight:500; color:#b3e4ff;">第 ${level+1} 關</div>
+                        <div class="history-list">`;
+                    for (const entry of levelHistory) {
+                        const missing = entry.correctList.filter(ch => !entry.collected.includes(ch));
+                        const statusText = entry.completed ? '✅ 完成' : '⏳ 未完成';
+                        const statusCls = entry.completed ? 'done' : 'fail';
+                        html += `<div class="history-item">
+                            <span class="time">${entry.timestamp}</span>
+                            <span class="detail">`;
+                        if (missing.length > 0) {
+                            const missStr = missing.map(ch => `<span class="char-item missing">${ch}</span>`).join('');
+                            html += `遺漏：${missStr} `;
+                        } else { html += `遺漏：無 `; }
+                        if (entry.errors.length > 0) {
+                            const errStr = entry.errors.map(ch => `<span class="char-item error">${ch}</span>`).join('');
+                            html += `誤選：${errStr} `;
+                        } else { html += `誤選：無 `; }
+                        html += `</span><span class="status ${statusCls}">${statusText}</span></div>`;
+                    }
+                    html += `</div></div>`;
+                }
+                html += `</div>`;
+            }
+            html += `<button class="clear-btn" id="clear-records-btn">🗑️ 清除所有記錄</button>`;
+            html += `<button class="close-btn" id="close-stats-modal">關閉</button>`;
+            statsModalContent.innerHTML = html;
+            statsModal.classList.add('show');
+
+            const closeBtn = statsModalContent.querySelector('#close-stats-modal');
+            closeBtn.addEventListener('click', closeStatsModal);
+            const clearBtn = statsModalContent.querySelector('#clear-records-btn');
+            clearBtn.addEventListener('click', clearAllRecords);
+            statsModal.addEventListener('click', (e) => { if (e.target === statsModal) closeStatsModal(); });
+        }
+
+        function closeStatsModal() { statsModal.classList.remove('show'); }
+
+        // ---- 遊戲邏輯 ----
+        let marbles = [];
+        let collectCount = 0,
+            errorCount = 0,
+            errorChars = [],
+            collectedChars = [];
+        let isPlaying = false,
+            isLevelComplete = false,
+            gameEnded = false;
+        let marbleTimer = null,
+            animFrameId = null,
+            waterAnimId = null;
+        let pendingIndex = 0,
+            shuffleOrder = [],
+            isPaused = false,
+            isGameActive = false;
+        let levelData = null;
+
+        let waterParticles = [];
+        const WATER_PARTICLE_COUNT = 50;
+
+        function createWaterParticles() {
+            waterParticles = [];
+            waterContainer.innerHTML = '';
+            for (let i = 0; i < WATER_PARTICLE_COUNT; i++) {
+                const el = document.createElement('div');
+                el.className = 'water-particle';
+                const startOffset = Math.random() * TOTAL_DURATION;
+                const progress = startOffset / TOTAL_DURATION;
+                const size = 4 + progress * 10;
+                el.style.width = size + 'px';
+                el.style.height = size + 'px';
+                const alpha = 0.2 + progress * 0.6;
+                el.style.background = `rgba(150, 225, 255, ${alpha})`;
+                el.style.boxShadow = `0 0 ${size * 0.5}px rgba(80, 200, 255, ${alpha * 0.5})`;
+                waterContainer.appendChild(el);
+                const scale = 0.3 + progress * 15.0;
+                const offX = (Math.random() - 0.5) * scale;
+                const offY = (Math.random() - 0.5) * scale;
+                waterParticles.push({
+                    element: el,
+                    startOffset: startOffset,
+                    offX: offX,
+                    offY: offY,
+                    size: size
+                });
+            }
+        }
+
+        function updateWaterParticles(elapsed) {
+            if (!progressFn) return;
+            for (const p of waterParticles) {
+                const t = (elapsed + p.startOffset) % TOTAL_DURATION;
+                const pos = progressFn(t);
+                let x = pos.x + p.offX;
+                let y = pos.y + p.offY;
+                x = Math.max(0, Math.min(100, x));
+                y = Math.max(0, Math.min(100, y));
+                p.element.style.left = x + '%';
+                p.element.style.top = y + '%';
+                const progress = t / TOTAL_DURATION;
+                const alpha = Math.sin(progress * Math.PI) * 0.5 + 0.3;
+                const brightness = 0.3 + progress * 0.7;
+                p.element.style.opacity = alpha * brightness * 0.8;
+            }
+        }
+
+        let waterStartTime = 0;
+
+        function startWaterAnimation() {
+            if (waterAnimId) cancelAnimationFrame(waterAnimId);
+            waterStartTime = performance.now();
+
+            function waterLoop(timestamp) {
+                if (!isPlaying || isPaused || !isGameActive) {
+                    waterAnimId = requestAnimationFrame(waterLoop);
+                    return;
+                }
+                const elapsed = (timestamp - waterStartTime) / 1000;
+                updateWaterParticles(elapsed);
+                waterAnimId = requestAnimationFrame(waterLoop);
+            }
+            waterAnimId = requestAnimationFrame(waterLoop);
+        }
+
+        function initLevel() {
+            const data = getLevelData(selectedMode, selectedLevel);
+            if (!data) { selectedLevel = 0;
+                initLevel(); return; }
+            levelData = data;
+            collectCount = 0;
+            errorCount = 0;
+            errorChars = [];
+            collectedChars = [];
+            isLevelComplete = false;
+            gameEnded = false;
+            pendingIndex = 0;
+            marbles = [];
+            shuffleOrder = data.order;
+            signText.textContent = data.targetDisplay;
+            signSub.textContent = data.subDisplay;
+            collectDisplay.textContent = '0／8';
+            levelDisplay.textContent = `⭐ 第 ${selectedLevel + 1} 關`;
+            lcOverlay.classList.remove('show');
+            lcBtnGroup.innerHTML = '';
+            marbleContainer.innerHTML = '';
+            createWaterParticles();
+            waterStartTime = performance.now();
+            startWaterAnimation();
+            isPlaying = true;
+            isGameActive = true;
+            startMarbleGeneration();
+        }
+
+        function startMarbleGeneration() {
+            if (marbleTimer) clearInterval(marbleTimer);
+            if (animFrameId) cancelAnimationFrame(animFrameId);
+            pendingIndex = 0;
+            marbles = [];
+            marbleContainer.innerHTML = '';
+            marbleTimer = setInterval(() => {
+                if (isPaused || isLevelComplete || !isPlaying || !isGameActive) return;
+                if (pendingIndex >= shuffleOrder.length) return;
+                createMarble();
+            }, 4500);
+            setTimeout(() => { if (!isPaused && !isLevelComplete && isPlaying && isGameActive) createMarble(); }, 600);
+            animateMarbles();
+        }
+
+        function createMarble() {
+            if (pendingIndex >= shuffleOrder.length || isLevelComplete || !isPlaying || !isGameActive) return;
+            const char = shuffleOrder[pendingIndex];
+            const isCorrect = levelData.correct.includes(char);
+            pendingIndex++;
+
+            const el = document.createElement('div');
+            el.className = 'marble';
+            const imgPath = `marble/${char}.png`;
+            el.style.backgroundImage = `url(${imgPath})`;
+
+            const imgTest = new Image();
+            let fallbackUsed = false;
+            imgTest.onload = function() {
+                if (!fallbackUsed) { console.log(`✅ 載入彈珠圖片: ${char}`); }
+            };
+            imgTest.onerror = function() {
+                if (!fallbackUsed) {
+                    fallbackUsed = true;
+                    el.classList.add('fallback');
+                    const span = document.createElement('span');
+                    span.className = 'fallback-char';
+                    span.textContent = char;
+                    el.appendChild(span);
+                }
+            };
+            imgTest.src = imgPath;
+            if (imgTest.complete && imgTest.naturalWidth > 0) {} else {
+                setTimeout(() => {
+                    if (imgTest.naturalWidth === 0 || imgTest.naturalHeight === 0) {
+                        if (!fallbackUsed) {
+                            fallbackUsed = true;
+                            el.classList.add('fallback');
+                            const span = document.createElement('span');
+                            span.className = 'fallback-char';
+                            span.textContent = char;
+                            el.appendChild(span);
+                        }
+                    }
+                }, 800);
+            }
+
+            const baseSize = Math.min(window.innerWidth * 0.22, window.innerHeight * 0.22, 200);
+            const finalSize = Math.max(baseSize, 80);
+            el.style.width = finalSize + 'px';
+            el.style.height = finalSize + 'px';
+
+            const startPos = PATH_PERCENT[0];
+            el.style.left = startPos.x + '%';
+            el.style.top = startPos.y + '%';
+            el.style.pointerEvents = 'auto';
+            el.style.opacity = '1';
+
+            el.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (marble.state === 'falling' && !marble.collected) speakChar(char);
+            });
+            el.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (marble.state === 'falling' && !marble.collected) speakChar(char);
+            }, { passive: false });
+
+            marbleContainer.appendChild(el);
+
+            const marble = {
+                char,
+                isCorrect,
+                state: 'falling',
+                element: el,
+                active: true,
+                baseSize: finalSize,
+                startTime: performance.now(),
+                x: startPos.x,
+                y: startPos.y,
+                progress: 0,
+                collected: false,
+                spoken: false,
+                lastProgress: 0,
+                lastTime: performance.now()
+            };
+            marbles.push(marble);
+        }
+
+        function animateMarbles() {
+            if (animFrameId) cancelAnimationFrame(animFrameId);
+            let lastTime = 0;
+
+            function loop(timestamp) {
+                if (!isPlaying || isPaused || !isGameActive) {
+                    animFrameId = requestAnimationFrame(loop);
+                    return;
+                }
+                let delta = (timestamp - lastTime) / 1000;
+                if (delta > 0.05) delta = 0.05;
+                lastTime = timestamp;
+                const now = performance.now();
+
+                for (const m of marbles) {
+                    if (!m.active) continue;
+                    const elapsed = (now - m.startTime) / 1000;
+                    if (elapsed >= TOTAL_DURATION) {
+                        m.active = false;
+                        soundWater();
+                        setTimeout(() => { if (m.element.parentNode) m.element.parentNode.removeChild(m.element); }, 600);
+                        continue;
+                    }
+                    const pos = progressFn(elapsed);
+                    m.progress = pos.progress;
+                    m.x = pos.x;
+                    m.y = pos.y;
+                    m.element.style.left = pos.x + '%';
+                    m.element.style.top = pos.y + '%';
+                    const scale = 0.7 + (elapsed / TOTAL_DURATION) * 0.8;
+                    const size = m.baseSize * scale;
+                    m.element.style.width = size + 'px';
+                    m.element.style.height = size + 'px';
+                    m.element.style.opacity = '1';
+
+                    const dx = pos.x - LOGIC_TARGET_POS.x;
+                    const dy = pos.y - LOGIC_TARGET_POS.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    const inZone = (dist < DETECT_RADIUS && !m.collected && m.active);
+
+                    if (inZone) {
+                        m.element.classList.add('in-decision-zone');
+                        if (!m.spoken) {
+                            m.spoken = true;
+                            speakChar(m.char);
+                        }
+                    } else {
+                        m.element.classList.remove('in-decision-zone');
+                    }
+                }
+
+                const allDone = marbles.every(m => !m.active);
+                if (allDone && pendingIndex >= shuffleOrder.length && !isLevelComplete && !gameEnded) {
+                    gameEnded = true;
+                    if (collectCount === 8) triggerLevelComplete();
+                    else showRetryOrSkip();
+                }
+                animFrameId = requestAnimationFrame(loop);
+            }
+            animFrameId = requestAnimationFrame(loop);
+        }
+
+        function triggerLeft() {
+            if (!isPlaying || isLevelComplete || isPaused || !isGameActive) return;
+            let candidates = marbles.filter(m => m.active && !m.collected);
+            if (candidates.length === 0) return;
+            let target = null;
+            let minDist = Infinity;
+            for (const m of candidates) {
+                const dx = m.x - LOGIC_TARGET_POS.x;
+                const dy = m.y - LOGIC_TARGET_POS.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < DETECT_RADIUS && dist < minDist) {
+                    minDist = dist;
+                    target = m;
+                }
+            }
+            if (!target) return;
+            collectMarble(target);
+        }
+
+        function collectMarble(m) {
+            if (m.collected) return;
+            m.collected = true;
+            m.active = false;
+            m.element.classList.remove('in-decision-zone');
+            if (m.isCorrect) {
+                collectCount++;
+                collectedChars.push(m.char);
+                collectDisplay.textContent = `${collectCount}／8`;
+                soundDing();
+            } else {
+                errorCount++;
+                errorChars.push(m.char);
+                soundError();
+            }
+            const el = m.element;
+            el.style.transition =
+                'left 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), top 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), width 0.8s ease, height 0.8s ease, transform 0.8s ease';
+            el.style.left = COLLECTION_POINT.x + '%';
+            el.style.top = COLLECTION_POINT.y + '%';
+            el.style.transform = 'scale(0) rotate(20deg)';
+            el.style.width = '0px';
+            el.style.height = '0px';
+            setTimeout(() => {
+                const ripple = document.createElement('div');
+                ripple.className = 'ripple-effect';
+                ripple.style.left = COLLECTION_POINT.x + '%';
+                ripple.style.top = COLLECTION_POINT.y + '%';
+                marbleContainer.appendChild(ripple);
+                setTimeout(() => { if (ripple.parentNode) ripple.parentNode.removeChild(ripple); }, 900);
+            }, 300);
+            const onFinish = () => {
+                el.removeEventListener('transitionend', onFinish);
+                if (el.parentNode) el.parentNode.removeChild(el);
+            };
+            el.addEventListener('transitionend', onFinish);
+            setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 3000);
+        }
+
+        function showCompleteUI(icon, msg, subMsg, errorList, status) {
+            lcIcon.textContent = icon;
+            lcMsg.textContent = msg;
+            lcSub.textContent = subMsg || '';
+            let errorHtml = '';
+            if (errorList && errorList.length > 0) {
+                errorHtml = `<span class="label">❌ 誤選字：</span>`;
+                errorList.forEach((ch, idx) => {
+                    errorHtml += `<span class="error-char">${ch}</span>`;
+                    if (idx < errorList.length - 1) errorHtml += ' ';
+                });
+            } else if (errorList !== undefined) {
+                errorHtml = `<span class="label">✅ 沒有誤選任何干擾字！</span>`;
+            }
+            if (collectCount !== undefined) {
+                errorHtml = `<span class="label">✅ 正確收集：</span><span class="correct-count">${collectCount}／8</span>` +
+                    (errorHtml ? '<br>' : '') + errorHtml;
+            }
+            lcErrorInfo.innerHTML = errorHtml;
+
+            lcBtnGroup.innerHTML = '';
+            const btnConfigs = [
+                { id: 'replay', img: 'replay_icon.png', action: () => { lcOverlay.classList.remove('show'); initLevel(); } },
+                { id: 'back', img: 'back_icon.png', action: () => { lcOverlay.classList.remove('show'); goToMenu(); } },
+            ];
+
+            if (status === 'next') {
+                btnConfigs.push({
+                    id: 'next',
+                    img: 'next_level_icon.png',
+                    label: '下一關',
+                    action: () => { lcOverlay.classList.remove('show'); selectedLevel++; initLevel(); }
+                });
+            } else if (status === 'retry') {
+                btnConfigs.push({
+                    id: 'skip',
+                    img: 'skip_icon.png',
+                    label: '跳過',
+                    action: () => {
+                        lcOverlay.classList.remove('show');
+                        const total = (selectedMode === 'sound') ? soundModeData.length : radicalModeData.length;
+                        if (selectedLevel + 1 >= total) {
+                            selectedLevel = 0;
+                            initLevel();
+                        } else {
+                            selectedLevel++;
+                            initLevel();
+                        }
+                    }
+                });
+            }
+
+            btnConfigs.forEach(cfg => {
+                const btn = document.createElement('button');
+                btn.className = 'lc-icon-btn';
+                const img = document.createElement('img');
+                img.src = `asset/${cfg.img}`;
+                img.alt = cfg.id;
+                img.onerror = function() {
+                    this.style.display = 'none';
+                    const fallback = document.createElement('span');
+                    fallback.className = 'fallback-label';
+                    let label = cfg.id === 'replay' ? '重玩' : cfg.id === 'back' ? '返回' : cfg.label || '繼續';
+                    fallback.textContent = label;
+                    btn.appendChild(fallback);
+                };
+                btn.appendChild(img);
+                btn.addEventListener('click', cfg.action);
+                lcBtnGroup.appendChild(btn);
+            });
+
+            lcOverlay.classList.add('show');
+        }
+
+        function triggerLevelComplete() {
+            if (isLevelComplete) return;
+            isLevelComplete = true;
+            isPlaying = false;
+            isGameActive = false;
+            if (marbleTimer) clearInterval(marbleTimer);
+            if (animFrameId) cancelAnimationFrame(animFrameId);
+            if (waterAnimId) cancelAnimationFrame(waterAnimId);
+            soundLevelUp();
+
+            const correctList = levelData.correct;
+            const completed = (collectCount === 8);
+            addHistory(selectedMode, selectedLevel, correctList, collectedChars, errorChars, completed);
+
+            const total = (selectedMode === 'sound') ? soundModeData.length : radicalModeData.length;
+            if (selectedLevel + 1 < total) {
+                showCompleteUI('🎉', '太棒了！', `第 ${selectedLevel+1} 關完成，進入下一關！`, errorChars, 'next');
+            } else {
+                showCompleteUI('🏆', '🎊 全部通關！', `你已完成所有 ${total} 關！總共誤選 ${errorCount} 次。`, errorChars, 'complete');
+                soundLevelUp();
+                setTimeout(soundLevelUp, 500);
+            }
+        }
+
+        function showRetryOrSkip() {
+            if (isLevelComplete) return;
+            isPlaying = false;
+            isGameActive = false;
+            if (marbleTimer) clearInterval(marbleTimer);
+            if (animFrameId) cancelAnimationFrame(animFrameId);
+            if (waterAnimId) cancelAnimationFrame(waterAnimId);
+
+            const correctList = levelData.correct;
+            addHistory(selectedMode, selectedLevel, correctList, collectedChars, errorChars, false);
+            showCompleteUI('🤔', `收集了 ${collectCount}／8 個正確字`, '再試一次，或跳過本關', errorChars, 'retry');
+        }
+
+        // ================================================================
+        //  畫面切換
+        // ================================================================
+        function showLevelSelect(mode) {
+            selectedMode = mode;
+            const modeLabel = (mode === 'sound') ? '偏旁配對' : '部首配對';
+            levelTitle.textContent = '📚 選擇關卡';
+            levelSub.textContent = `${modeLabel} · 共 5 關`;
+            levelGrid.innerHTML = '';
+            const total = (mode === 'sound') ? soundModeData.length : radicalModeData.length;
+            for (let i = 0; i < total; i++) {
+                const btn = document.createElement('button');
+                btn.className = 'level-btn';
+                const img = document.createElement('img');
+                img.className = 'level-icon';
+                img.src = `asset/level${i+1}.png`;
+                img.alt = `第 ${i+1} 關`;
+                btn.appendChild(img);
+                if (i === selectedLevel) btn.classList.add('active');
+                btn.dataset.level = i;
+                btn.addEventListener('click', () => {
+                    levelGrid.querySelectorAll('.level-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    selectedLevel = i;
+                    startGame();
+                });
+                levelGrid.appendChild(btn);
+            }
+            menu.classList.add('hidden');
+            levelSelect.classList.remove('hidden');
+            game.classList.remove('active');
+            lcOverlay.classList.remove('show');
+        }
+
+        function startGame() {
+            levelSelect.classList.add('hidden');
+            game.classList.add('active');
+            initAudio();
+            if (!bgmInterval) startBGM();
+            bgmSlider.value = bgmVolume;
+            bgmLabel.textContent = Math.round(bgmVolume * 100) + '%';
+            sfxSlider.value = sfxVolume;
+            sfxLabel.textContent = Math.round(sfxVolume * 100) + '%';
+            ttsSlider.value = ttsVolume;
+            ttsLabel.textContent = Math.round(ttsVolume * 100) + '%';
+            initLevel();
+        }
+
+        function goToLevelSelect() {
+            if (marbleTimer) clearInterval(marbleTimer);
+            if (animFrameId) cancelAnimationFrame(animFrameId);
+            if (waterAnimId) cancelAnimationFrame(waterAnimId);
+            isPlaying = false;
+            isGameActive = false;
+            game.classList.remove('active');
+            lcOverlay.classList.remove('show');
+            marbleContainer.innerHTML = '';
+            waterContainer.innerHTML = '';
+            waterParticles = [];
+            showLevelSelect(selectedMode);
+        }
+
+        function goToMenu() {
+            levelSelect.classList.add('hidden');
+            menu.classList.remove('hidden');
+            game.classList.remove('active');
+            lcOverlay.classList.remove('show');
+            if (marbleTimer) clearInterval(marbleTimer);
+            if (animFrameId) cancelAnimationFrame(animFrameId);
+            if (waterAnimId) cancelAnimationFrame(waterAnimId);
+            isPlaying = false;
+            isGameActive = false;
+            marbleContainer.innerHTML = '';
+            waterContainer.innerHTML = '';
+            waterParticles = [];
+            selectedLevel = 0;
+            if (!bgmInterval && !document.hidden) {
+                startBGM();
+            }
+        }
+
+        // ================================================================
+        //  按鈕事件綁定
+        // ================================================================
+        function bindButtonEvents() {
+            const soundHandler = function(e) {
+                e.preventDefault();
+                initAudio();
+                if (!bgmInterval) startBGM();
+                showLevelSelect('sound');
+                console.log('🔊 偏旁配對按鈕點擊');
+            };
+            const radicalHandler = function(e) {
+                e.preventDefault();
+                initAudio();
+                if (!bgmInterval) startBGM();
+                showLevelSelect('radical');
+                console.log('📖 部首配對按鈕點擊');
+            };
+            const statsHandler = function(e) {
+                e.preventDefault();
+                initAudio();
+                if (!bgmInterval) startBGM();
+                renderStatsModal();
+                console.log('📊 記錄按鈕點擊');
+            };
+            const backMenuHandler = function(e) {
+                e.preventDefault();
+                goToMenu();
+            };
+            const backGameHandler = function(e) {
+                e.preventDefault();
+                goToLevelSelect();
+            };
+
+            btnSound.addEventListener('click', soundHandler);
+            btnSound.addEventListener('touchstart', soundHandler, { passive: false });
+            btnRadical.addEventListener('click', radicalHandler);
+            btnRadical.addEventListener('touchstart', radicalHandler, { passive: false });
+            btnStats.addEventListener('click', statsHandler);
+            btnStats.addEventListener('touchstart', statsHandler, { passive: false });
+            backToMenu.addEventListener('click', backMenuHandler);
+            backToMenu.addEventListener('touchstart', backMenuHandler, { passive: false });
+            document.getElementById('btn-back').addEventListener('click', backGameHandler);
+            document.getElementById('btn-back').addEventListener('touchstart', backGameHandler, { passive: false });
+
+            console.log('✅ 所有按鈕事件綁定完成');
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', bindButtonEvents);
+        } else {
+            bindButtonEvents();
+        }
+        window.addEventListener('load', bindButtonEvents);
+
+        // ---- 鍵盤與陀螺儀 ----
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft' || e.key === 'Left') {
+                e.preventDefault();
+                if (game.classList.contains('active') && !lcOverlay.classList.contains('show')) triggerLeft();
+            }
+        });
+
+        let leftTriggered = false;
+
+        function handleOrientation(e) {
+            if (!game.classList.contains('active') || !e.gamma) return;
+            if (e.gamma < -12 && !leftTriggered) {
+                leftTriggered = true;
+                triggerLeft();
+                setTimeout(() => leftTriggered = false, 300);
+            }
+            if (e.gamma > -5) leftTriggered = false;
+        }
+
+        if (window.DeviceOrientationEvent) {
+            if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+                DeviceOrientationEvent.requestPermission().then(s => {
+                    if (s === 'granted') window.addEventListener('deviceorientation', handleOrientation);
+                }).catch(() => {});
+            } else {
+                window.addEventListener('deviceorientation', handleOrientation);
+            }
+        }
+
+        document.addEventListener('touchmove', (e) => { if (e.target.closest('#app')) e.preventDefault(); }, { passive: false });
+        document.addEventListener('visibilitychange', () => { isPaused = document.hidden; });
+
+        window.speechSynthesis.getVoices();
+
+        // ---- 初始化 ----
+        buildProgressFn();
+        menu.classList.remove('hidden');
+        levelSelect.classList.add('hidden');
+        game.classList.remove('active');
+        selectedMode = 'sound';
+        selectedLevel = 0;
+        console.log('🌊 青流字旅 · 文字漂流記 已啟動');
+
+        // ★★★ 手機端整體縮放適配（僅在手機上生效） ★★★
+        function adjustScale() {
+            const isMobile = window.innerWidth <= 768;
+            if (!isMobile) {
+                // PC 端恢復正常
+                const app = document.getElementById('app');
+                app.style.transform = '';
+                app.style.left = '';
+                app.style.top = '';
+                app.style.width = '';
+                app.style.height = '';
+                app.style.maxWidth = '1100px';
+                app.style.maxHeight = '';
+                return;
+            }
+            const app = document.getElementById('app');
+            const baseWidth = 1100;
+            const baseHeight = 618.75; // 1100 * 9 / 16
+            const winWidth = window.innerWidth;
+            const winHeight = window.innerHeight;
+            const scaleX = winWidth / baseWidth;
+            const scaleY = winHeight / baseHeight;
+            const scale = Math.min(scaleX, scaleY, 1); // 不放大，只缩小
+            app.style.transform = `translate(-50%, -50%) scale(${scale})`;
+            app.style.transformOrigin = 'center center';
+            app.style.position = 'absolute';
+            app.style.left = '50%';
+            app.style.top = '50%';
+            app.style.width = baseWidth + 'px';
+            app.style.height = baseHeight + 'px';
+            app.style.maxWidth = 'none';
+            app.style.maxHeight = 'none';
+        }
+
+        window.addEventListener('resize', adjustScale);
+        window.addEventListener('orientationchange', function() {
+            setTimeout(adjustScale, 300);
+        });
+        adjustScale();
+        console.log('📱 手機縮放適配已啟用 (關卡按鈕強制一行)');
+    </script>
+</body>
+</html>
